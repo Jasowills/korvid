@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { Raven } from './Raven'
 
 export function Nav() {
   const { pathname } = useLocation()
@@ -23,10 +24,10 @@ export function Nav() {
       justifyContent: 'space-between',
       padding: '0 48px',
       height: 56,
-      background: scrolled ? 'rgba(18, 21, 26, 0.92)' : 'rgba(18, 21, 26, 0.6)',
-      backdropFilter: 'blur(20px) saturate(1.2)',
-      WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
-      borderBottom: `1px solid ${scrolled ? 'rgba(42, 49, 56, 0.8)' : 'rgba(42, 49, 56, 0.3)'}`,
+      background: scrolled ? 'rgba(18, 21, 26, 0.92)' : 'rgba(18, 21, 26, 0.5)',
+      backdropFilter: 'blur(24px) saturate(1.3)',
+      WebkitBackdropFilter: 'blur(24px) saturate(1.3)',
+      borderBottom: `1px solid ${scrolled ? 'rgba(42, 49, 56, 0.7)' : 'rgba(42, 49, 56, 0.2)'}`,
       transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
     }}>
       <Link to="/" style={{
@@ -38,17 +39,9 @@ export function Nav() {
         textDecoration: 'none',
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
+        gap: 10,
       }}>
-        <span style={{
-          display: 'inline-block',
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: 'var(--color-sheen)',
-          boxShadow: '0 0 8px rgba(124,140,255,0.4)',
-          animation: 'sheenPulse 3s ease-in-out infinite',
-        }} />
+        <Raven pose="idle" size={24} />
         korvid
       </Link>
 
@@ -94,7 +87,6 @@ export function Nav() {
             color: 'var(--color-bone)',
             letterSpacing: '0.04em',
             textDecoration: 'none',
-            transition: 'all 0.3s',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
@@ -102,6 +94,7 @@ export function Nav() {
             border: '1px solid rgba(42,49,56,0.5)',
             borderRadius: 5,
             background: 'rgba(28,33,38,0.4)',
+            transition: 'all 0.3s',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = 'rgba(124,140,255,0.3)'

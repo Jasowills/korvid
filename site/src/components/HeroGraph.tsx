@@ -1,32 +1,34 @@
-import { useRef, useMemo, useEffect } from 'react'
+import { useRef, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
 const SHEEN = new THREE.Color('#7C8CFF')
+const SPARK = new THREE.Color('#FFB648')
 const SLATE = new THREE.Color('#2A3138')
-const EMBER = new THREE.Color('#FF6B4A')
 
 interface NodeData {
   pos: [number, number, number]
-  isSheen: boolean
+  color: THREE.Color
   size: number
   phase: number
   orbitRadius: number
   orbitSpeed: number
-  orbitOffset: number
 }
 
 function generateGraph(): { nodes: NodeData[]; edges: [number, number][] } {
   const nodes: NodeData[] = []
   const edges: [number, number][] = []
-  const count = 32
+  const count = 36
 
   for (let i = 0; i < count; i++) {
-    const isSheen = i % 7 === 0
+    const isSheen = i % 6 === 0
+    const isSpark = i % 9 === 0
     const phi = Math.acos(1 - 2 * (i + 0.5) / count)
     const theta = Math.PI * (1 + Math.sqrt(5)) * i
-    const r = 3.5 + (Math.random() - 0.5) * 1.5
+    const r = 3.2 + (Math.random() - 0.5) * 1.8
+
+    const color = isSpark ? SPARK : isSheen ? SHEEN : SLATE
 
     nodes.push({
       pos: [
@@ -34,12 +36,11 @@ function generateGraph(): { nodes: NodeData[]; edges: [number, number][] } {
         r * Math.sin(phi) * Math.sin(theta),
         r * Math.cos(phi),
       ],
-      isSheen,
-      size: isSheen ? 0.1 + Math.random() * 0.06 : 0.03 + Math.random() * 0.03,
+      color,
+      size: (isSheen || isSpark) ? 0.09 + Math.random() * 0.06 : 0.025 + Math.random() * 0.03,
       phase: Math.random() * Math.PI * 2,
-      orbitRadius: 0.02 + Math.random() * 0.03,
-      orbitSpeed: 0.15 + Math.random() * 0.2,
-      orbitOffset: i * 0.3,
+      orbitRadius: 0.015 + Math.random() * 0.025,
+      orbitSpeed: 0.12 + Math.random() * 0.18,
     })
   }
 
@@ -58,44 +59,43 @@ function LivingNode({ data, index }: { data: NodeData; index: number }) {
   const ref = useRef<THREE.Mesh>(null)
   const matRef = useRef<THREE.MeshStandardMaterial>(null)
   const basePos = useMemo(() => new THREE.Vector3(...data.pos), [data.pos])
+  const isAccent = data.color.equals(SHEEN) || data.color.equals(SPARK)
 
   useFrame(({ clock }) => {
     if (!ref.current || !matRef.current) return
     const t = clock.getElapsedTime()
 
-    const drift = Math.sin(t * data.orbitSpeed + data.orbitOffset) * data.orbitRadius
+    const drift = Math.sin(t * data.orbitSpeed + index * 0.3) * data.orbitRadius
     const drift2 = Math.cos(t * data.orbitSpeed * 0.7 + data.phase) * data.orbitRadius * 0.5
 
     ref.current.position.set(
       basePos.x + drift,
       basePos.y + drift2,
-      basePos.z + Math.sin(t * 0.1 + index) * 0.01,
+      basePos.z + Math.sin(t * 0.1 + index) * 0.008,
     )
 
-    if (data.isSheen) {
-      const pulse = 0.3 + Math.sin(t * 0.6 + data.phase) * 0.4
+    if (isAccent) {
+      const pulse = 0.3 + Math.sin(t * 0.5 + data.phase) * 0.5
       matRef.current.emissiveIntensity = pulse
-      ref.current.scale.setScalar(1 + pulse * 0.4)
+      ref.current.scale.setScalar(1 + pulse * 0.35)
     } else {
-      const breathe = 0.85 + Math.sin(t * 0.2 + data.phase) * 0.15
+      const breathe = 0.88 + Math.sin(t * 0.18 + data.phase) * 0.12
       ref.current.scale.setScalar(breathe)
     }
   })
 
-  const color = data.isSheen ? SHEEN : SLATE
-
   return (
     <mesh ref={ref} position={data.pos}>
-      <sphereGeometry args={[data.size, 16, 16]} />
+      <sphereGeometry args={[data.size, 14, 14]} />
       <meshStandardMaterial
         ref={matRef}
-        color={color}
-        emissive={data.isSheen ? SHEEN : new THREE.Color('#000000')}
-        emissiveIntensity={data.isSheen ? 0.5 : 0}
+        color={data.color}
+        emissive={isAccent ? data.color : new THREE.Color('#000000')}
+        emissiveIntensity={isAccent ? 0.5 : 0}
         transparent
-        opacity={data.isSheen ? 0.95 : 0.4}
-        roughness={0.3}
-        metalness={0.1}
+        opacity={isAccent ? 0.95 : 0.35}
+        roughness={0.25}
+        metalness={0.15}
       />
     </mesh>
   )
@@ -110,8 +110,7 @@ function LivingEdges({ nodes, edges }: { nodes: NodeData[]; edges: [number, numb
     ref.current.children.forEach((child, i) => {
       const line = child as THREE.Line
       const mat = line.material as THREE.LineBasicMaterial
-      const pulse = 0.08 + Math.sin(t * 0.3 + i * 0.5) * 0.04
-      mat.opacity = pulse
+      mat.opacity = 0.06 + Math.sin(t * 0.25 + i * 0.4) * 0.04
     })
   })
 
@@ -135,7 +134,7 @@ function LivingEdges({ nodes, edges }: { nodes: NodeData[]; edges: [number, numb
                 itemSize={3}
               />
             </bufferGeometry>
-            <lineBasicMaterial color={SLATE} transparent opacity={0.1} />
+            <lineBasicMaterial color={SLATE} transparent opacity={0.08} />
           </line>
         )
       })}
@@ -145,14 +144,14 @@ function LivingEdges({ nodes, edges }: { nodes: NodeData[]; edges: [number, numb
 
 function AmbientParticles() {
   const ref = useRef<THREE.Points>(null)
-  const count = 60
+  const count = 80
 
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3)
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 14
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 14
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 14
+      pos[i * 3] = (Math.random() - 0.5) * 16
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 16
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 16
     }
     return pos
   }, [])
@@ -162,11 +161,11 @@ function AmbientParticles() {
     const t = clock.getElapsedTime()
     const posAttr = ref.current.geometry.getAttribute('position') as THREE.BufferAttribute
     for (let i = 0; i < count; i++) {
-      posAttr.array[i * 3 + 1] += Math.sin(t * 0.15 + i) * 0.003
-      posAttr.array[i * 3] += Math.cos(t * 0.1 + i * 0.5) * 0.002
+      posAttr.array[i * 3 + 1] += Math.sin(t * 0.12 + i) * 0.002
+      posAttr.array[i * 3] += Math.cos(t * 0.08 + i * 0.5) * 0.0015
     }
     posAttr.needsUpdate = true
-    ref.current.rotation.y = t * 0.02
+    ref.current.rotation.y = t * 0.015
   })
 
   return (
@@ -182,9 +181,9 @@ function AmbientParticles() {
       </bufferGeometry>
       <pointsMaterial
         color={SHEEN}
-        size={0.02}
+        size={0.018}
         transparent
-        opacity={0.3}
+        opacity={0.25}
         sizeAttenuation
         depthWrite={false}
       />
@@ -194,38 +193,33 @@ function AmbientParticles() {
 
 function CameraRig() {
   const { camera } = useThree()
-
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
-    camera.position.x = Math.sin(t * 0.05) * 0.3
-    camera.position.y = Math.cos(t * 0.04) * 0.2
+    camera.position.x = Math.sin(t * 0.04) * 0.25
+    camera.position.y = Math.cos(t * 0.035) * 0.18
   })
-
   return null
 }
 
 function Scene() {
   const { nodes, edges } = useMemo(() => generateGraph(), [])
-
   return (
     <>
-      <ambientLight intensity={0.15} />
-      <pointLight position={[10, 10, 10]} intensity={0.3} color={SHEEN} />
-      <pointLight position={[-10, -5, -8]} intensity={0.15} color={EMBER} />
-      <pointLight position={[0, 0, 0]} intensity={0.1} color={SHEEN} distance={8} />
-
+      <ambientLight intensity={0.12} />
+      <pointLight position={[10, 10, 10]} intensity={0.35} color={SHEEN} />
+      <pointLight position={[-8, -4, -6]} intensity={0.2} color={SPARK} />
+      <pointLight position={[0, 0, 0]} intensity={0.08} color={SHEEN} distance={8} />
       <LivingEdges nodes={nodes} edges={edges} />
       {nodes.map((node, i) => (
         <LivingNode key={i} data={node} index={i} />
       ))}
       <AmbientParticles />
       <CameraRig />
-
       <OrbitControls
         enableZoom={false}
         enablePan={false}
         autoRotate
-        autoRotateSpeed={0.15}
+        autoRotateSpeed={0.12}
         maxPolarAngle={Math.PI * 0.65}
         minPolarAngle={Math.PI * 0.35}
       />
@@ -235,11 +229,7 @@ function Scene() {
 
 export function HeroGraph() {
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      pointerEvents: 'none',
-    }}>
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
       <Canvas
         camera={{ position: [0, 0, 9], fov: 50 }}
         style={{ background: 'transparent' }}
@@ -249,36 +239,36 @@ export function HeroGraph() {
         <Scene />
       </Canvas>
 
-      {/* Vignette — deep radial fade */}
+      {/* Deep vignette */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: `radial-gradient(ellipse 70% 60% at 50% 50%, transparent 0%, rgba(18,21,26,0.4) 50%, var(--color-obsidian) 80%)`,
+        background: `radial-gradient(ellipse 65% 55% at 50% 50%, transparent 0%, rgba(18,21,26,0.3) 45%, var(--color-obsidian) 78%)`,
         pointerEvents: 'none',
       }} />
 
-      {/* Top ambient glow */}
+      {/* Sheen ambient glow — top left */}
       <div style={{
         position: 'absolute',
-        top: '-20%',
-        left: '30%',
-        width: '40%',
-        height: '50%',
-        background: 'radial-gradient(ellipse at center, rgba(124,140,255,0.06) 0%, transparent 70%)',
+        top: '-15%',
+        left: '20%',
+        width: '45%',
+        height: '55%',
+        background: 'radial-gradient(ellipse at center, rgba(124,140,255,0.07) 0%, transparent 70%)',
         pointerEvents: 'none',
-        animation: 'drift 20s ease-in-out infinite',
+        animation: 'drift 18s ease-in-out infinite',
       }} />
 
-      {/* Bottom ambient glow */}
+      {/* Spark ambient glow — bottom right */}
       <div style={{
         position: 'absolute',
         bottom: '-10%',
-        right: '20%',
-        width: '30%',
-        height: '40%',
-        background: 'radial-gradient(ellipse at center, rgba(255,107,74,0.03) 0%, transparent 70%)',
+        right: '15%',
+        width: '35%',
+        height: '45%',
+        background: 'radial-gradient(ellipse at center, rgba(255,182,72,0.04) 0%, transparent 70%)',
         pointerEvents: 'none',
-        animation: 'drift 25s ease-in-out infinite reverse',
+        animation: 'drift 22s ease-in-out infinite reverse',
       }} />
     </div>
   )

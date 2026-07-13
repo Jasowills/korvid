@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Raven } from './Raven'
 
 export function Footer() {
   return (
@@ -7,7 +8,6 @@ export function Footer() {
       borderTop: '1px solid rgba(42,49,56,0.3)',
       padding: '48px',
     }}>
-      {/* Subtle top glow */}
       <div style={{
         position: 'absolute',
         top: -1,
@@ -22,42 +22,33 @@ export function Footer() {
         margin: '0 auto',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'flex-end',
         gap: 48,
         flexWrap: 'wrap',
       }}>
-        {/* Brand */}
-        <div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 14,
-            fontWeight: 600,
-            color: 'var(--color-bone)',
-            marginBottom: 6,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}>
-            <span style={{
-              width: 5,
-              height: 5,
-              borderRadius: '50%',
-              background: 'var(--color-sheen)',
-              opacity: 0.5,
-            }} />
-            korvid
-          </div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            color: 'rgba(232,234,237,0.25)',
-            letterSpacing: '0.03em',
-          }}>
-            personal ai assistant
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+          <Raven pose="asleep" size={48} />
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 14,
+              fontWeight: 600,
+              color: 'var(--color-bone)',
+              marginBottom: 4,
+            }}>
+              korvid
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              color: 'rgba(232,234,237,0.25)',
+              letterSpacing: '0.03em',
+            }}>
+              personal ai assistant
+            </div>
           </div>
         </div>
 
-        {/* Links */}
         <div style={{ display: 'flex', gap: 72 }}>
           <div>
             <div style={{
@@ -76,17 +67,13 @@ export function Footer() {
                 { to: '/integrations', label: 'integrations' },
                 { to: '/shoutouts', label: 'shoutouts' },
               ].map(({ to, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: 13,
-                    color: 'rgba(232,234,237,0.4)',
-                    textDecoration: 'none',
-                    transition: 'color 0.3s',
-                  }}
-                >
+                <Link key={to} to={to} style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 13,
+                  color: 'rgba(232,234,237,0.4)',
+                  textDecoration: 'none',
+                  transition: 'color 0.3s',
+                }}>
                   {label}
                 </Link>
               ))}
@@ -105,32 +92,22 @@ export function Footer() {
               links
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <a
-                href="https://github.com/Jasowills/korvid"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: 13,
-                  color: 'rgba(232,234,237,0.4)',
-                  textDecoration: 'none',
-                  transition: 'color 0.3s',
-                }}
-              >
+              <a href="https://github.com/Jasowills/korvid" target="_blank" rel="noopener noreferrer" style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 13,
+                color: 'rgba(232,234,237,0.4)',
+                textDecoration: 'none',
+                transition: 'color 0.3s',
+              }}>
                 github
               </a>
-              <a
-                href="https://github.com/Jasowills/korvid/blob/main/LICENSE"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: 13,
-                  color: 'rgba(232,234,237,0.4)',
-                  textDecoration: 'none',
-                  transition: 'color 0.3s',
-                }}
-              >
+              <a href="https://github.com/Jasowills/korvid/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 13,
+                color: 'rgba(232,234,237,0.4)',
+                textDecoration: 'none',
+                transition: 'color 0.3s',
+              }}>
                 license
               </a>
             </div>
@@ -138,7 +115,6 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div style={{
         maxWidth: 1100,
         margin: '32px auto 0',
