@@ -3,80 +3,153 @@ import { Link } from 'react-router-dom'
 export function Footer() {
   return (
     <footer style={{
-      borderTop: '1px solid var(--color-slate)',
-      padding: '40px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      gap: 40,
-      flexWrap: 'wrap',
+      position: 'relative',
+      borderTop: '1px solid rgba(42,49,56,0.3)',
+      padding: '48px',
     }}>
-      <div>
-        <div style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 14,
-          fontWeight: 600,
-          color: 'var(--color-bone)',
-          marginBottom: 8,
-        }}>
-          korvid
-        </div>
-        <div style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 12,
-          color: 'var(--color-slate)',
-        }}>
-          personal ai assistant
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 64 }}>
-        <div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            color: 'var(--color-slate)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            marginBottom: 12,
-          }}>
-            product
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Link to="/" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-bone)', opacity: 0.7, textDecoration: 'none' }}>home</Link>
-            <Link to="/integrations" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-bone)', opacity: 0.7, textDecoration: 'none' }}>integrations</Link>
-            <Link to="/shoutouts" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-bone)', opacity: 0.7, textDecoration: 'none' }}>shoutouts</Link>
-          </div>
-        </div>
-
-        <div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            color: 'var(--color-slate)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            marginBottom: 12,
-          }}>
-            links
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <a href="https://github.com/Jasowills/korvid" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-bone)', opacity: 0.7, textDecoration: 'none' }}>github</a>
-            <a href="https://github.com/Jasowills/korvid/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-bone)', opacity: 0.7, textDecoration: 'none' }}>license</a>
-          </div>
-        </div>
-      </div>
+      {/* Subtle top glow */}
+      <div style={{
+        position: 'absolute',
+        top: -1,
+        left: '30%',
+        right: '30%',
+        height: 1,
+        background: 'linear-gradient(90deg, transparent, rgba(124,140,255,0.15), transparent)',
+      }} />
 
       <div style={{
-        width: '100%',
-        paddingTop: 24,
-        marginTop: 16,
-        borderTop: '1px solid var(--color-slate)',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 11,
-        color: 'var(--color-slate)',
+        maxWidth: 1100,
+        margin: '0 auto',
         display: 'flex',
         justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 48,
+        flexWrap: 'wrap',
+      }}>
+        {/* Brand */}
+        <div>
+          <div style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'var(--color-bone)',
+            marginBottom: 6,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            <span style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: 'var(--color-sheen)',
+              opacity: 0.5,
+            }} />
+            korvid
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            color: 'rgba(232,234,237,0.25)',
+            letterSpacing: '0.03em',
+          }}>
+            personal ai assistant
+          </div>
+        </div>
+
+        {/* Links */}
+        <div style={{ display: 'flex', gap: 72 }}>
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--color-slate)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              marginBottom: 14,
+            }}>
+              product
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { to: '/', label: 'home' },
+                { to: '/integrations', label: 'integrations' },
+                { to: '/shoutouts', label: 'shoutouts' },
+              ].map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 13,
+                    color: 'rgba(232,234,237,0.4)',
+                    textDecoration: 'none',
+                    transition: 'color 0.3s',
+                  }}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--color-slate)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              marginBottom: 14,
+            }}>
+              links
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <a
+                href="https://github.com/Jasowills/korvid"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 13,
+                  color: 'rgba(232,234,237,0.4)',
+                  textDecoration: 'none',
+                  transition: 'color 0.3s',
+                }}
+              >
+                github
+              </a>
+              <a
+                href="https://github.com/Jasowills/korvid/blob/main/LICENSE"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 13,
+                  color: 'rgba(232,234,237,0.4)',
+                  textDecoration: 'none',
+                  transition: 'color 0.3s',
+                }}
+              >
+                license
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom bar */}
+      <div style={{
+        maxWidth: 1100,
+        margin: '32px auto 0',
+        paddingTop: 20,
+        borderTop: '1px solid rgba(42,49,56,0.2)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        color: 'rgba(232,234,237,0.15)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        letterSpacing: '0.05em',
       }}>
         <span>built on openclaw</span>
         <span>v0.1.0</span>

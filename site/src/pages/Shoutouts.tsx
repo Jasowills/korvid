@@ -1,89 +1,113 @@
-import { useState, useEffect, useRef } from 'react'
-
-function AnimatedSection({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true) },
-      { threshold: 0.1 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(16px)',
-        transition: `opacity 0.6s ease-out ${delay}ms, transform 0.6s ease-out ${delay}ms`,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
+import { RevealBlock } from '../hooks/useScrollReveal'
 
 export function Shoutouts() {
   return (
-    <div style={{ padding: '120px 40px 80px', maxWidth: 720, margin: '0 auto' }}>
-      <AnimatedSection>
+    <div style={{ padding: '120px 48px 100px', maxWidth: 720, margin: '0 auto' }}>
+      <RevealBlock>
         <div style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
-          color: 'var(--color-slate)',
+          fontSize: 10,
+          color: 'var(--color-sheen)',
           textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          marginBottom: 16,
+          letterSpacing: '0.15em',
+          marginBottom: 20,
+          opacity: 0.7,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
         }}>
+          <span style={{
+            width: 16,
+            height: 1,
+            background: 'var(--color-sheen)',
+            opacity: 0.4,
+          }} />
           shoutouts
         </div>
         <h1 style={{
           fontFamily: 'var(--font-body)',
-          fontSize: 'clamp(28px, 5vw, 40px)',
+          fontSize: 'clamp(28px, 5vw, 44px)',
           fontWeight: 600,
           color: 'var(--color-bone)',
           marginBottom: 12,
+          letterSpacing: '-0.03em',
         }}>
           what people are saying
         </h1>
         <p style={{
           fontFamily: 'var(--font-body)',
           fontSize: 15,
-          color: 'var(--color-slate)',
-          marginBottom: 48,
+          color: 'rgba(232,234,237,0.4)',
+          marginBottom: 64,
           lineHeight: 1.7,
         }}>
           genuine community mentions and testimonials will appear here
           as people start using korvid. no fabricated quotes.
         </p>
-      </AnimatedSection>
+      </RevealBlock>
 
-      <AnimatedSection delay={100}>
+      <RevealBlock delay={100}>
         <div style={{
-          border: '1px dashed var(--color-slate)',
+          position: 'relative',
+          border: '1px dashed rgba(42,49,56,0.4)',
           borderRadius: 8,
-          padding: '80px 32px',
+          padding: '96px 32px',
           textAlign: 'center',
+          overflow: 'hidden',
         }}>
+          {/* Corner marks */}
+          <div style={{
+            position: 'absolute',
+            top: 16,
+            left: 16,
+            width: 16,
+            height: 16,
+            borderTop: '1px solid rgba(124,140,255,0.15)',
+            borderLeft: '1px solid rgba(124,140,255,0.15)',
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            width: 16,
+            height: 16,
+            borderTop: '1px solid rgba(124,140,255,0.15)',
+            borderRight: '1px solid rgba(124,140,255,0.15)',
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: 16,
+            left: 16,
+            width: 16,
+            height: 16,
+            borderBottom: '1px solid rgba(124,140,255,0.15)',
+            borderLeft: '1px solid rgba(124,140,255,0.15)',
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: 16,
+            right: 16,
+            width: 16,
+            height: 16,
+            borderBottom: '1px solid rgba(124,140,255,0.15)',
+            borderRight: '1px solid rgba(124,140,255,0.15)',
+          }} />
+
+          {/* Center glyph */}
           <div style={{
             fontFamily: 'var(--font-mono)',
             fontSize: 32,
-            color: 'var(--color-slate)',
-            marginBottom: 16,
-            opacity: 0.4,
+            color: 'rgba(42,49,56,0.4)',
+            marginBottom: 20,
           }}>
             ○
           </div>
+
           <div style={{
             fontFamily: 'var(--font-body)',
             fontSize: 16,
-            color: 'var(--color-slate)',
+            fontWeight: 500,
+            color: 'rgba(232,234,237,0.5)',
             marginBottom: 8,
           }}>
             coming soon
@@ -91,13 +115,16 @@ export function Shoutouts() {
           <div style={{
             fontFamily: 'var(--font-body)',
             fontSize: 13,
-            color: 'var(--color-slate)',
-            opacity: 0.6,
+            color: 'rgba(232,234,237,0.25)',
+            maxWidth: 320,
+            margin: '0 auto',
+            lineHeight: 1.6,
           }}>
             this page will fill with real quotes as the community grows.
+            nothing here until someone actually says it.
           </div>
         </div>
-      </AnimatedSection>
+      </RevealBlock>
     </div>
   )
 }
