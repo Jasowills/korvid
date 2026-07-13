@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RevealBlock } from '../hooks/useScrollReveal'
+import { RevealBlock } from '../hooks/useScrollReveal.tsx'
 
 interface Integration {
   name: string

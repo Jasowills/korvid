@@ -1,4 +1,4 @@
-import { RevealBlock } from '../hooks/useScrollReveal'
+import { RevealBlock } from '../hooks/useScrollReveal.tsx'
 
 export function Shoutouts() {
   return (

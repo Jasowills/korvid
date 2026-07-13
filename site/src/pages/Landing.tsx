@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { HeroGraph } from '../components/HeroGraph'
-import { RevealBlock } from '../hooks/useScrollReveal'
+import { RevealBlock } from '../hooks/useScrollReveal.tsx'
 
 const installCmd = 'curl -fsSL https://korvid.ai/install.sh | bash'
 
