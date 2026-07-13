@@ -8,6 +8,8 @@
     "start": "pnpm --filter @korvid/gateway start",
     "init": "pnpm --filter @korvid/cli exec korvid init",
     "build": "pnpm -r build",
+    "site:dev": "pnpm --filter @korvid/site dev",
+    "site:build": "pnpm --filter @korvid/site build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"

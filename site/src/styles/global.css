@@ -1,0 +1,75 @@
+:root {
+  --color-obsidian: #12151A;
+  --color-graphite: #1C2126;
+  --color-slate: #2A3138;
+  --color-bone: #E8EAED;
+  --color-sheen: #7C8CFF;
+  --color-ember: #FF6B4A;
+  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+  --font-body: 'Space Grotesk', system-ui, sans-serif;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-obsidian);
+  color: var(--color-bone);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+a {
+  color: var(--color-sheen);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+a:hover {
+  opacity: 0.8;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: rgba(124, 140, 255, 0.3);
+  color: var(--color-bone);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-obsidian);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate);
+  border-radius: 3px;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sheenPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
