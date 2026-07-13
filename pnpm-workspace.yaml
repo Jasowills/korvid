@@ -1,0 +1,11 @@
+packages:
+  - "packages/*"
+allowBuilds:
+  '@google/genai': true
+  better-sqlite3: true
+  cpu-features: true
+  esbuild: true
+  openclaw: true
+  protobufjs: true
+  ssh2: true
+  tree-sitter-bash: true

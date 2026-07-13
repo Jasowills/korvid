@@ -1,0 +1,18 @@
+{
+  "name": "korvid",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Korvid — a personal Jarvis-style AI assistant",
+  "scripts": {
+    "dev": "pnpm --filter @korvid/gateway dev",
+    "start": "pnpm --filter @korvid/gateway start",
+    "init": "pnpm --filter @korvid/cli exec korvid init",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=22.22.3"
+  }
+}
