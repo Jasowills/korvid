@@ -1,8 +1,7 @@
 import { Command } from "commander";
-import chalk from "chalk";
+import * as p from "@clack/prompts";
 import { execFileSync } from "node:child_process";
 import { loadConfig } from "@korvid/shared/config-file.js";
-import { STATUS_GLYPH } from "../brand.js";
 
 interface CheckResult {
   name: string;
@@ -21,6 +20,13 @@ function checkCmd(name: string, cmd: string, args: string[], purpose: string, in
   }
 }
 
+function platformHint(tool: string, brewPkg?: string): string | undefined {
+  const pl = process.platform;
+  if (pl === "darwin") return `brew install ${brewPkg ?? tool}`;
+  if (pl === "win32") return `choco install ${brewPkg ?? tool}`;
+  return `apt install ${brewPkg ?? tool}`;
+}
+
 function checkDocker(): CheckResult {
   try {
     execFileSync("docker", ["info"], { timeout: 5000, stdio: "pipe" });
@@ -30,73 +36,87 @@ function checkDocker(): CheckResult {
   }
 }
 
+function formatCheck(r: CheckResult): string {
+  const icon = r.installed ? "\x1b[38;2;124;140;255m●\x1b[0m" : "\x1b[38;2;255;107;74m✕\x1b[0m";
+  const ver = r.version ? ` \x1b[2m${r.version}\x1b[0m` : "";
+  const purpose = ` \x1b[2m${r.purpose}\x1b[0m`;
+  const hint = !r.installed && r.installCmd ? `\n    \x1b[2m${r.installCmd}\x1b[0m` : "";
+  return `  ${icon} ${r.name}${ver}${purpose}${hint}`;
+}
+
 export const doctorCommand = new Command("doctor")
   .description("Check system dependencies and configuration")
   .action(async () => {
-    console.log(chalk.dim("\n  system diagnostics\n"));
+    p.intro("Korvid Doctor");
 
-    const checks: CheckResult[] = [
+    const systemChecks: CheckResult[] = [
       checkCmd("Node.js", "node", ["--version"], "runtime", "https://nodejs.org"),
       checkCmd("pnpm", "pnpm", ["--version"], "package manager", "npm install -g pnpm"),
       checkCmd("Ollama", "ollama", ["--version"], "local llm", "https://ollama.com"),
-      checkCmd("sox", "sox", ["--version"], "microphone", "brew install sox"),
-      checkCmd("imagesnap", "imagesnap", ["-h"], "webcam (macos)", "brew install imagesnap"),
-      checkCmd("ffmpeg", "ffmpeg", ["-version"], "audio processing", "brew install ffmpeg"),
-      checkCmd("ffplay", "ffplay", ["-version"], "audio playback", "brew install ffmpeg"),
+      checkCmd("sox", "sox", ["--version"], "microphone", platformHint("sox")),
+      checkCmd("imagesnap", "imagesnap", ["-h"], "webcam (macos)", platformHint("imagesnap")),
+      checkCmd("ffmpeg", "ffmpeg", ["-version"], "audio processing", platformHint("ffmpeg")),
+      checkCmd("ffplay", "ffplay", ["-version"], "audio playback", platformHint("ffmpeg")),
       checkDocker(),
     ];
 
     let allGood = true;
+    const results: string[] = [];
 
-    for (const check of checks) {
-      const icon = check.installed ? chalk.hex("#7C8CFF")(STATUS_GLYPH.active) : chalk.hex("#FF6B4A")(STATUS_GLYPH.error);
-      const version = check.version ? chalk.dim(` ${check.version}`) : "";
-      console.log(`  ${icon} ${chalk.bold(check.name)}${version} ${chalk.dim(check.purpose)}`);
-
-      if (!check.installed) {
-        allGood = false;
-        if (check.installCmd) {
-          if (check.installCmd.startsWith("http")) {
-            console.log(chalk.dim(`    ${check.installCmd}`));
-          } else {
-            console.log(chalk.dim(`    ${check.installCmd}`));
-          }
-        }
+    for (const check of systemChecks) {
+      const s = p.spinner();
+      s.start(`Checking ${check.name}`);
+      await new Promise((r) => setTimeout(r, 120));
+      results.push(formatCheck(check));
+      if (check.installed) {
+        s.stop(`${check.name} found`);
+      } else {
+        s.stop(`${check.name} missing`);
       }
+      if (!check.installed) allGood = false;
     }
 
-    console.log(chalk.dim("\n  configuration\n"));
+    // Configuration section
+    const configLines: string[] = [];
     try {
       const config = loadConfig();
-      console.log(`  ${chalk.hex("#7C8CFF")(STATUS_GLYPH.active)} config loaded`);
-      console.log(chalk.dim(`    reasoning: ${config.models.reasoning.provider}/${config.models.reasoning.model}`));
-      console.log(chalk.dim(`    stt: ${config.voice.stt.provider}`));
-      console.log(chalk.dim(`    tts: ${config.voice.tts.provider}`));
+      configLines.push("  \x1b[38;2;124;140;255m●\x1b[0m config loaded");
+      configLines.push(`    \x1b[2mreasoning: ${config.models.reasoning.provider}/${config.models.reasoning.model}\x1b[0m`);
+      configLines.push(`    \x1b[2mstt: ${config.voice.stt.provider}\x1b[0m`);
+      configLines.push(`    \x1b[2mtts: ${config.voice.tts.provider}\x1b[0m`);
 
       if (config.models.reasoning.provider === "ollama") {
         try {
           const res = execFileSync("ollama", ["list"], { timeout: 5000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
-          const models = res.trim().split("\n").slice(1).map(l => l.split(/\s+/)[0]);
+          const models = res.trim().split("\n").slice(1).map((l) => l.split(/\s+/)[0]);
           if (models.length === 0) {
-            console.log(chalk.hex("#FF6B4A")(`  ${STATUS_GLYPH.error} no ollama models. run: ollama pull llama3.2:1b`));
-          } else if (!models.some(m => m.includes("llama3.2"))) {
-            console.log(chalk.hex("#FF6B4A")(`  ${STATUS_GLYPH.error} llama3.2 not found. available: ${models.join(", ")}`));
+            configLines.push("  \x1b[38;2;255;107;74m✕\x1b[0m no ollama models");
+            configLines.push("    \x1b[2mrun: ollama pull llama3.2:1b\x1b[0m");
+            allGood = false;
+          } else if (!models.some((m) => m.includes("llama3.2"))) {
+            configLines.push("  \x1b[38;2;255;107;74m✕\x1b[0m llama3.2 not found");
+            configLines.push(`    \x1b[2mavailable: ${models.join(", ")}\x1b[0m`);
+            allGood = false;
           } else {
-            console.log(chalk.hex("#7C8CFF")(`  ${STATUS_GLYPH.active} ollama model available`));
+            configLines.push("  \x1b[38;2;124;140;255m●\x1b[0m ollama model available");
           }
         } catch {
-          console.log(chalk.hex("#FF6B4A")(`  ${STATUS_GLYPH.error} cannot reach ollama`));
+          configLines.push("  \x1b[38;2;255;107;74m✕\x1b[0m cannot reach ollama");
+          allGood = false;
         }
       }
     } catch {
-      console.log(chalk.hex("#FF6B4A")(`  ${STATUS_GLYPH.error} no config. run: korvid init`));
+      configLines.push("  \x1b[38;2;255;107;74m✕\x1b[0m no config");
+      configLines.push("    \x1b[2mrun: korvid init\x1b[0m");
+      allGood = false;
     }
 
-    console.log("");
+    p.note(results.join("\n") || "(no system checks)", "System Dependencies");
+    p.note(configLines.join("\n"), "Configuration");
+
     if (allGood) {
-      console.log(chalk.hex("#7C8CFF")("  all dependencies installed"));
+      p.outro("All dependencies installed.");
     } else {
-      console.log(chalk.hex("#FF6B4A")("  some dependencies missing. reduced functionality."));
+      p.outro("Some dependencies missing — reduced functionality.");
     }
-    console.log("");
   });

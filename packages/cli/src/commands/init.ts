@@ -1,29 +1,29 @@
 import { Command } from "commander";
-import inquirer from "inquirer";
-import chalk from "chalk";
+import * as p from "@clack/prompts";
 import { execFileSync } from "node:child_process";
 import { KorvidConfigSchema, type KorvidConfig } from "@korvid/shared";
 import { writeConfig, configExists, getConfigPath } from "@korvid/shared/config-file.js";
-import { brandBoot, STATUS_GLYPH } from "../brand.js";
+
+function cancelGuard<T>(value: T | symbol): T | never {
+  if (p.isCancel(value)) {
+    p.cancel("aborted.");
+    process.exit(0);
+  }
+  return value as T;
+}
 
 export const initCommand = new Command("init")
   .description("Initialize Korvid configuration")
   .option("--defaults", "Use all default settings (non-interactive)")
   .action(async (opts) => {
-    console.log(brandBoot());
-    console.log(chalk.dim("  configuring korvid.\n"));
+    p.intro("Korvid");
 
     if (configExists() && !opts.defaults) {
-      const { overwrite } = await inquirer.prompt([
-        {
-          type: "confirm",
-          name: "overwrite",
-          message: `config exists at ${getConfigPath()}. overwrite?`,
-          default: false,
-        },
-      ]);
+      const overwrite = cancelGuard(
+        await p.confirm({ message: `Config exists at ${getConfigPath()}. Overwrite?`, initialValue: false })
+      );
       if (!overwrite) {
-        console.log(chalk.dim("  aborted."));
+        p.cancel("aborted.");
         return;
       }
     }
@@ -32,66 +32,65 @@ export const initCommand = new Command("init")
 
     if (opts.defaults) {
       config = KorvidConfigSchema.parse({});
-      console.log(chalk.dim("  Using all defaults (Ollama local, manual wake word, local STT/TTS).\n"));
+      p.log.info("Using all defaults (Ollama local, manual wake word, local STT/TTS).");
     } else {
       config = await runWizard();
     }
 
+    const s = p.spinner();
+    s.start("Writing config");
     writeConfig(config);
     const path = getConfigPath();
+    s.stop(`Config written to ${path}`);
 
-    console.log(chalk.hex("#7C8CFF")(`\n  ${STATUS_GLYPH.active} configured.`));
-    console.log(chalk.dim(`  ${path}\n`));
-
-    console.log(chalk.dim("  checking dependencies...\n"));
+    p.log.step("Checking dependencies...");
     await runSystemChecks(config);
 
-    console.log(chalk.dim("  next steps:"));
-    console.log(chalk.dim("    1. start ollama:        ollama serve"));
-    console.log(chalk.dim("    2. pull a model:        ollama pull llama3.2"));
-    console.log(chalk.dim("    3. start korvid:        korvid start"));
-    console.log(chalk.dim("    4. check diagnostics:   korvid doctor\n"));
+    p.note(
+      [
+        "1. Start Ollama:       ollama serve",
+        "2. Pull a model:       ollama pull llama3.2",
+        "3. Start Korvid:       korvid start",
+        "4. Diagnostics:        korvid doctor",
+      ].join("\n"),
+      "Next steps"
+    );
+
+    p.outro("Done. Korvid is configured.");
   });
 
 async function runWizard(): Promise<KorvidConfig> {
   // ── Model Provider ─────────────────────────────────────────────
-  const { reasoningProvider } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "reasoningProvider",
+  const reasoningProvider = cancelGuard(
+    await p.select({
       message: "Which reasoning model provider?",
-      choices: [
-        { name: "Ollama (local, free — recommended for dev)", value: "ollama" },
-        { name: "Anthropic (Claude)", value: "anthropic" },
-        { name: "OpenAI (GPT)", value: "openai" },
-        { name: "Google (Gemini)", value: "google" },
-        { name: "Groq (fast, cheap)", value: "groq" },
-        { name: "OpenRouter (multi-provider)", value: "openrouter" },
+      options: [
+        { value: "ollama", label: "Ollama", hint: "Local, free — recommended for dev" },
+        { value: "anthropic", label: "Anthropic", hint: "Claude models — requires API key" },
+        { value: "openai", label: "OpenAI", hint: "GPT models — requires API key" },
+        { value: "google", label: "Google Gemini", hint: "Gemini models — requires API key" },
+        { value: "groq", label: "Groq", hint: "Fast inference — requires API key" },
+        { value: "openrouter", label: "OpenRouter", hint: "Multi-provider router — requires API key" },
       ],
-      default: "ollama",
-    },
-  ]);
+      initialValue: "ollama",
+    })
+  );
 
   let reasoningModel = "llama3.2";
   let reasoningApiKey: string | undefined;
 
   if (reasoningProvider === "ollama") {
-    const { model } = await inquirer.prompt([
-      {
-        type: "input",
-        name: "model",
+    reasoningModel = cancelGuard(
+      await p.text({
         message: "Ollama model name:",
-        default: "llama3.2",
-      },
-    ]);
-    reasoningModel = model;
+        defaultValue: "llama3.2",
+      })
+    );
   } else {
-    const { model, apiKey } = await inquirer.prompt([
-      {
-        type: "input",
-        name: "model",
-        message: "Model name (provider/model format, e.g. claude-sonnet-4-6):",
-        default:
+    const model = cancelGuard(
+      await p.text({
+        message: "Model name:",
+        defaultValue:
           reasoningProvider === "anthropic"
             ? "claude-sonnet-4-6"
             : reasoningProvider === "openai"
@@ -101,181 +100,128 @@ async function runWizard(): Promise<KorvidConfig> {
                 : reasoningProvider === "groq"
                   ? "llama-3.1-8b-instant"
                   : "anthropic/claude-sonnet-4-6",
-      },
-      {
-        type: "password",
-        name: "apiKey",
-        message: `API key for ${reasoningProvider}:`,
-        mask: "*",
-      },
-    ]);
+      })
+    );
     reasoningModel = model;
-    reasoningApiKey = apiKey;
+    reasoningApiKey = cancelGuard(
+      await p.password({ message: `API key for ${reasoningProvider}:`, mask: "*" })
+    );
   }
 
   // ── Fast Model ─────────────────────────────────────────────────
-  const { useFastModel } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "useFastModel",
+  const useFastModel = cancelGuard(
+    await p.confirm({
       message: "Configure a separate fast/routing model?",
-      default: reasoningProvider === "ollama",
-    },
-  ]);
+      initialValue: reasoningProvider === "ollama",
+    })
+  );
 
   let fastProvider = reasoningProvider;
   let fastModel = reasoningModel;
   let fastApiKey = reasoningApiKey;
 
   if (useFastModel) {
-    const { provider } = await inquirer.prompt([
-      {
-        type: "list",
-        name: "provider",
+    fastProvider = cancelGuard(
+      await p.select({
         message: "Fast model provider:",
-        choices: [
-          { name: "Groq (fastest, cheap)", value: "groq" },
-          { name: "Ollama (local, free)", value: "ollama" },
-          { name: "Google Gemini Flash", value: "google" },
-          { name: "Same as reasoning provider", value: reasoningProvider },
+        options: [
+          { value: "groq", label: "Groq", hint: "Fastest inference, cheap" },
+          { value: "ollama", label: "Ollama", hint: "Local, free" },
+          { value: "google", label: "Google Gemini Flash", hint: "Fast, cheap" },
+          { value: reasoningProvider, label: "Same as reasoning provider", hint: "" },
         ],
-        default: "groq",
-      },
-    ]);
-    fastProvider = provider;
+        initialValue: "groq",
+      })
+    );
 
-    if (provider !== "ollama") {
-      const { model, apiKey } = await inquirer.prompt([
-        {
-          type: "input",
-          name: "model",
-          message: "Fast model name:",
-          default: "llama-3.1-8b-instant",
-        },
-        {
-          type: "password",
-          name: "apiKey",
-          message: `API key for ${provider} (or press Enter to reuse reasoning key):`,
+    if (fastProvider !== "ollama") {
+      const model = cancelGuard(
+        await p.text({ message: "Fast model name:", defaultValue: "llama-3.1-8b-instant" })
+      );
+      fastModel = model;
+      const key = cancelGuard(
+        await p.password({
+          message: `API key for ${fastProvider} (Enter to reuse reasoning key):`,
           mask: "*",
-        },
-      ]);
-      fastModel = model;
-      fastApiKey = apiKey || reasoningApiKey;
+        })
+      );
+      fastApiKey = key || reasoningApiKey;
     } else {
-      const { model } = await inquirer.prompt([
-        {
-          type: "input",
-          name: "model",
-          message: "Ollama model name:",
-          default: "llama3.2",
-        },
-      ]);
-      fastModel = model;
+      fastModel = cancelGuard(
+        await p.text({ message: "Ollama model name:", defaultValue: "llama3.2" })
+      );
     }
   }
 
   // ── Wake Word ──────────────────────────────────────────────────
-  const { wakeEngine } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "wakeEngine",
+  const wakeEngine = cancelGuard(
+    await p.select({
       message: "Wake word detection engine:",
-      choices: [
-        { name: "Manual trigger (keyboard/CLI — recommended for dev)", value: "manual" },
-        { name: "Porcupine (on-device, requires key)", value: "porcupine" },
-        { name: "openWakeWord (on-device, free)", value: "openwakeword" },
+      options: [
+        { value: "manual", label: "Manual trigger", hint: "Keyboard/CLI — recommended for dev" },
+        { value: "porcupine", label: "Porcupine", hint: "On-device, requires API key" },
+        { value: "openwakeword", label: "openWakeWord", hint: "On-device, free" },
       ],
-      default: "manual",
-    },
-  ]);
+      initialValue: "manual",
+    })
+  );
 
   // ── STT ────────────────────────────────────────────────────────
-  const { sttProvider } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "sttProvider",
+  const sttProvider = cancelGuard(
+    await p.select({
       message: "Speech-to-text provider:",
-      choices: [
-        { name: "Local Whisper (free, offline)", value: "local-whisper" },
-        { name: "Groq Whisper (fast, cheap)", value: "groq" },
-        { name: "Deepgram (fast, accurate)", value: "deepgram" },
+      options: [
+        { value: "local-whisper", label: "Local Whisper", hint: "Free, offline" },
+        { value: "groq", label: "Groq Whisper", hint: "Fast, cheap" },
+        { value: "deepgram", label: "Deepgram", hint: "Fast, accurate" },
       ],
-      default: "local-whisper",
-    },
-  ]);
+      initialValue: "local-whisper",
+    })
+  );
 
   let sttApiKey: string | undefined;
   if (sttProvider !== "local-whisper") {
-    const { apiKey } = await inquirer.prompt([
-      {
-        type: "password",
-        name: "apiKey",
-        message: `API key for ${sttProvider} STT:`,
-        mask: "*",
-      },
-    ]);
-    sttApiKey = apiKey;
+    sttApiKey = cancelGuard(
+      await p.password({ message: `API key for ${sttProvider} STT:`, mask: "*" })
+    );
   }
 
   // ── TTS ────────────────────────────────────────────────────────
-  const { ttsProvider } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "ttsProvider",
+  const ttsProvider = cancelGuard(
+    await p.select({
       message: "Text-to-speech provider:",
-      choices: [
-        { name: "Local (macOS say / system TTS — free)", value: "local" },
-        { name: "ElevenLabs (high quality, requires key)", value: "elevenlabs" },
-        { name: "Cartesia (low-latency, requires key)", value: "cartesia" },
+      options: [
+        { value: "local", label: "Local (macOS say / system TTS)", hint: "Free" },
+        { value: "elevenlabs", label: "ElevenLabs", hint: "High quality, requires API key" },
+        { value: "cartesia", label: "Cartesia", hint: "Low-latency, requires API key" },
       ],
-      default: "local",
-    },
-  ]);
+      initialValue: "local",
+    })
+  );
 
   let ttsApiKey: string | undefined;
   let ttsVoiceId: string | undefined;
   if (ttsProvider !== "local") {
-    const answers = await inquirer.prompt([
-      {
-        type: "password",
-        name: "apiKey",
-        message: `API key for ${ttsProvider} TTS:`,
-        mask: "*",
-      },
-      {
-        type: "input",
-        name: "voiceId",
-        message: "Voice ID (leave blank for default):",
-        default: "",
-      },
-    ]);
-    ttsApiKey = answers.apiKey;
-    ttsVoiceId = answers.voiceId || undefined;
+    ttsApiKey = cancelGuard(
+      await p.password({ message: `API key for ${ttsProvider} TTS:`, mask: "*" })
+    );
+    const voiceId = cancelGuard(
+      await p.text({ message: "Voice ID (blank for default):", defaultValue: "" })
+    );
+    ttsVoiceId = voiceId || undefined;
   }
 
   // ── Port ───────────────────────────────────────────────────────
-  const { port } = await inquirer.prompt([
-    {
-      type: "number",
-      name: "port",
-      message: "Gateway port:",
-      default: 3847,
-    },
-  ]);
+  const portStr = cancelGuard(
+    await p.text({ message: "Gateway port:", defaultValue: "3847" })
+  );
+  const port = parseInt(portStr, 10) || 3847;
 
   // ── Assemble ───────────────────────────────────────────────────
-  const config: KorvidConfig = KorvidConfigSchema.parse({
+  return KorvidConfigSchema.parse({
     models: {
-      reasoning: {
-        provider: reasoningProvider,
-        model: reasoningModel,
-        apiKey: reasoningApiKey,
-      },
-      fast: {
-        provider: fastProvider,
-        model: fastModel,
-        apiKey: fastApiKey,
-      },
+      reasoning: { provider: reasoningProvider, model: reasoningModel, apiKey: reasoningApiKey },
+      fast: { provider: fastProvider, model: fastModel, apiKey: fastApiKey },
     },
     voice: {
       wakeWord: { engine: wakeEngine },
@@ -284,8 +230,6 @@ async function runWizard(): Promise<KorvidConfig> {
     },
     gateway: { port },
   });
-
-  return config;
 }
 
 function checkInstalled(cmd: string, args: string[]): boolean {
@@ -297,11 +241,18 @@ function checkInstalled(cmd: string, args: string[]): boolean {
   }
 }
 
+function platformHint(tool: string, brewPkg?: string): string {
+  const p2 = process.platform;
+  if (p2 === "darwin") return `brew install ${brewPkg ?? tool}`;
+  if (p2 === "win32") return `choco install ${brewPkg ?? tool}`;
+  return `apt install ${brewPkg ?? tool}`;
+}
+
 async function runSystemChecks(config: KorvidConfig) {
   const checks: { name: string; ok: boolean; hint?: string }[] = [];
 
   checks.push({ name: "Node.js", ok: true });
-  checks.push({ name: "Ollama", ok: checkInstalled("ollama", ["--version"]), hint: "brew install ollama" });
+  checks.push({ name: "Ollama", ok: checkInstalled("ollama", ["--version"]), hint: platformHint("ollama") });
 
   if (config.voice.stt.provider === "local-whisper") {
     const hasWhisper = checkInstalled("whisper", ["--help"]) || checkInstalled("python3", ["-c", "import whisper"]);
@@ -314,23 +265,24 @@ async function runSystemChecks(config: KorvidConfig) {
   }
 
   const hasSox = checkInstalled("sox", ["--version"]);
-  checks.push({ name: "Sox (mic recording)", ok: hasSox, hint: "brew install sox" });
+  checks.push({ name: "Sox (mic recording)", ok: hasSox, hint: platformHint("sox") });
 
   const hasFfmpeg = checkInstalled("ffmpeg", ["-version"]);
-  checks.push({ name: "FFmpeg (audio/video)", ok: hasFfmpeg, hint: "brew install ffmpeg" });
+  checks.push({ name: "FFmpeg (audio/video)", ok: hasFfmpeg, hint: platformHint("ffmpeg") });
 
   const hasImagesnap = checkInstalled("imagesnap", ["-h"]);
-  checks.push({ name: "ImageSnap (webcam)", ok: hasImagesnap, hint: "brew install imagesnap" });
+  checks.push({ name: "ImageSnap (webcam)", ok: hasImagesnap, hint: platformHint("imagesnap") });
 
   for (const check of checks) {
-    const icon = check.ok ? chalk.hex("#7C8CFF")(STATUS_GLYPH.active) : chalk.hex("#FF6B4A")(STATUS_GLYPH.error);
-    const hint = check.ok ? "" : chalk.dim(` — ${check.hint}`);
-    console.log(`  ${icon} ${check.name}${hint}`);
+    const s = p.spinner();
+    s.start(`Checking ${check.name}`);
+    // Simulate a brief check delay so spinner is visible
+    await new Promise((r) => setTimeout(r, 150));
+    if (check.ok) {
+      s.stop(`${check.name} found`);
+    } else {
+      s.stop(`${check.name} missing`);
+      p.log.warn(`${check.hint ? `${check.hint}` : `Install ${check.name}`}`);
+    }
   }
-
-  const missing = checks.filter((c) => !c.ok);
-  if (missing.length > 0) {
-    console.log(chalk.dim(`\n  ${missing.length} optional dependencies missing. korvid doctor for details.`));
-  }
-  console.log("");
 }
