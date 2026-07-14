@@ -5,6 +5,7 @@ import { useGatewayState } from "./hooks/useGatewayState.js";
 import { Orb } from "./components/Orb.js";
 import { Header } from "./components/Header.js";
 import { BrainView } from "./components/BrainView.js";
+import { Greeting } from "./components/Greeting.js";
 import { ActivityPanel } from "./components/ActivityPanel.js";
 import { DiagnosticsPanel } from "./components/DiagnosticsPanel.js";
 import { ToolPermissionsPanel } from "./components/ToolPermissionsPanel.js";
@@ -64,6 +65,7 @@ export function App() {
     try {
       const now = ctx.currentTime;
 
+      // Rising sweep
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = "sine";
@@ -75,6 +77,7 @@ export function App() {
       osc1.start(now);
       osc1.stop(now + 0.4);
 
+      // Digital click
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = "square";
@@ -85,6 +88,7 @@ export function App() {
       osc2.start(now + 0.15);
       osc2.stop(now + 0.25);
 
+      // C6 chime
       const osc3 = ctx.createOscillator();
       const gain3 = ctx.createGain();
       osc3.type = "sine";
@@ -95,6 +99,7 @@ export function App() {
       osc3.start(now + 0.25);
       osc3.stop(now + 0.6);
 
+      // E6 chime
       const osc4 = ctx.createOscillator();
       const gain4 = ctx.createGain();
       osc4.type = "sine";
@@ -179,15 +184,16 @@ export function App() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: 500,
-            height: 500,
+            width: 600,
+            height: 600,
             borderRadius: "50%",
             background: isActive
-              ? `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.06)} 0%, transparent 70%)`
-              : `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.02)} 0%, transparent 70%)`,
-            transition: "background 0.8s ease",
+              ? `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.08)} 0%, ${rgba(BRAND.color.sheen, 0.03)} 40%, transparent 70%)`
+              : `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.03)} 0%, transparent 60%)`,
+            transition: "background 1s ease",
             pointerEvents: "none",
             zIndex: 0,
+            animation: isActive ? "orbGlowActive 4s ease-in-out infinite" : "orbGlow 6s ease-in-out infinite",
           }} />
 
           {/* Orb centered */}
@@ -196,17 +202,18 @@ export function App() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: 220,
-            height: 220,
+            width: 280,
+            height: 280,
             zIndex: 2,
             pointerEvents: "none",
+            animation: "float 8s ease-in-out infinite",
           }}>
-            <Canvas camera={{ position: [0, 0, 2], fov: 45 }}>
+            <Canvas camera={{ position: [0, 0, 2.2], fov: 40 }}>
               <Orb active={isActive} />
             </Canvas>
           </div>
 
-          {/* Memory graph behind Orb */}
+          {/* Memory graph (transparent, behind Orb) */}
           <BrainView
             memoryNodes={state.memoryNodes}
             pipelineState={state.pipelineState}
@@ -216,6 +223,9 @@ export function App() {
             activeNodes={state.activeNodes}
             onNodeClick={setSelectedNodeId}
           />
+
+          {/* Greeting overlay */}
+          <Greeting connected={state.connected} />
 
           {/* Visualization overlay */}
           {hasViz && (
@@ -251,9 +261,11 @@ export function App() {
               textTransform: "uppercase",
               animation: "sheenPulse 2s ease-in-out infinite",
               textShadow: `0 0 24px ${rgba(BRAND.color.sheen, 0.4)}`,
-              padding: "4px 12px",
-              borderRadius: 4,
-              background: rgba(BRAND.color.sheen, 0.05),
+              padding: "6px 16px",
+              borderRadius: 6,
+              background: rgba(BRAND.color.sheen, 0.06),
+              border: `1px solid ${rgba(BRAND.color.sheen, 0.1)}`,
+              backdropFilter: "blur(12px)",
             }}>
               {state.pipelineState === "processing" ? "thinking" : state.pipelineState}
             </div>
@@ -263,7 +275,7 @@ export function App() {
           {state.partialTranscript && (
             <div style={{
               position: "absolute",
-              bottom: 56,
+              bottom: 64,
               left: "50%",
               transform: "translateX(-50%)",
               background: rgba(BRAND.color.bg, 0.85),
@@ -289,22 +301,22 @@ export function App() {
           {state.streamingText && (
             <div style={{
               position: "absolute",
-              bottom: 96,
+              bottom: 104,
               left: "50%",
               transform: "translateX(-50%)",
               background: rgba(BRAND.color.bg, 0.85),
               backdropFilter: "blur(16px)",
               border: `1px solid ${rgba(BRAND.color.sheen, 0.12)}`,
               borderRadius: 10,
-              padding: "8px 18px",
+              padding: "10px 20px",
               fontFamily: BRAND.font.body,
-              fontSize: 13,
+              fontSize: 14,
               color: BRAND.color.white,
               maxWidth: "80%",
               textAlign: "center",
               animation: "fadeIn 0.2s ease-out",
               boxShadow: `0 4px 24px ${rgba(BRAND.color.sheen, 0.06)}`,
-              lineHeight: 1.5,
+              lineHeight: 1.6,
             }}>
               {state.streamingText}
               <span style={{ animation: "blink 1s infinite", marginLeft: 2, color: BRAND.color.sheen, opacity: 0.6 }}>|</span>
@@ -321,6 +333,7 @@ export function App() {
         flexDirection: "column",
         overflow: "hidden",
         background: rgba(BRAND.color.surface, 0.3),
+        backdropFilter: "blur(8px)",
       }}>
         <div style={{
           flex: 1,

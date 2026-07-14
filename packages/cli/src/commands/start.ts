@@ -131,33 +131,45 @@ export const startCommand = new Command("start")
               sensitivity: config.voice.clapActivation.sensitivity ?? 0.5,
             });
 
-            // Start continuous audio feed to clap detector
-            const { spawn } = await import("node:child_process");
-            const isMac = process.platform === "darwin";
-            let micProcess: ReturnType<typeof spawn>;
+            // Check for available audio capture tools
+            const { spawn, execSync } = await import("node:child_process");
+            let hasSox = false;
+            let hasFfmpeg = false;
+            try { execSync("which sox", { stdio: "ignore" }); hasSox = true; } catch {}
+            try { execSync("which ffmpeg", { stdio: "ignore" }); hasFfmpeg = true; } catch {}
 
-            if (isMac) {
-              micProcess = spawn("sox", [
-                "-d", "-t", "raw", "-r", "16000", "-e", "signed-integer",
-                "-b", "16", "-c", "1", "-",
-              ], { stdio: ["ignore", "pipe", "pipe"] });
+            if (!hasSox && !hasFfmpeg) {
+              log.warn("no audio capture tool found (install sox or ffmpeg for clap detection)");
+              console.log(chalk.dim("  clap detection requires sox or ffmpeg. Install with: brew install sox"));
             } else {
-              micProcess = spawn("arecord", [
-                "-f", "S16_LE", "-r", "16000", "-c", "1", "-t", "raw", "-q",
-              ], { stdio: ["ignore", "pipe", "pipe"] });
-            }
+              // Start continuous audio feed to clap detector
+              let micProcess: ReturnType<typeof spawn>;
 
-            if (micProcess.stdout) {
-              micProcess.stdout.on("data", (chunk: Buffer) => {
-                clapDetector.processAudio(chunk);
+              if (hasSox) {
+                micProcess = spawn("sox", [
+                  "-d", "-t", "raw", "-r", "16000", "-e", "signed-integer",
+                  "-b", "16", "-c", "1", "-",
+                ], { stdio: ["ignore", "pipe", "pipe"] });
+              } else {
+                // ffmpeg fallback for macOS
+                micProcess = spawn("ffmpeg", [
+                  "-f", "avfoundation", "-i", ":0",
+                  "-ar", "16000", "-ac", "1", "-f", "s16le", "-",
+                ], { stdio: ["ignore", "pipe", "pipe"] });
+              }
+
+              if (micProcess.stdout) {
+                micProcess.stdout.on("data", (chunk: Buffer) => {
+                  clapDetector.processAudio(chunk);
+                });
+              }
+
+              micProcess.on("error", (err) => {
+                log.warn("mic capture failed for clap detector", { error: err.message });
               });
+
+              log.info("clap detector listening on microphone");
             }
-
-            micProcess.on("error", (err) => {
-              log.warn("mic capture failed for clap detector", { error: err.message });
-            });
-
-            log.info("clap detector listening on microphone");
           }
 
           voicePipeline = createVoicePipeline({

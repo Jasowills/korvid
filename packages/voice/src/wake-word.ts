@@ -115,52 +115,109 @@ function createPorcupineDetector(config: KorvidConfig): WakeWordDetector {
   };
 }
 
-// ── Keyword Spotter (VAD + energy-based detection) ────────────────
-// Uses audio energy monitoring to detect when someone might be speaking,
-// then triggers wake. No external dependencies needed.
+// ── Keyword Spotter (energy + Whisper verification) ───────────────
+// Monitors audio energy, then runs Whisper to verify the keyword.
 
 function createKeywordSpotter(config: KorvidConfig): WakeWordDetector {
   let wakeCallback: (() => void) | null = null;
   let running = false;
   let audioStream: NodeJS.ReadableStream | null = null;
+  let verifying = false;
 
   const keyword = (config.voice.wakeWord.keyword ?? "hey korvid").toLowerCase();
   const sensitivity = config.voice.wakeWord.sensitivity ?? 0.5;
 
+  // Buffer audio chunks for keyword verification
+  let audioChunks: Buffer[] = [];
+  const VERIFY_BUFFER_MS = 2500; // Keep 2.5s of audio for verification
+  const SAMPLE_RATE = 16000;
+  const BYTES_PER_SEC = SAMPLE_RATE * 2; // 16-bit mono
+  const MAX_BUFFER_BYTES = Math.floor(VERIFY_BUFFER_MS / 1000 * BYTES_PER_SEC);
+
+  async function verifyWithWhisper(): Promise<boolean> {
+    if (verifying) return false;
+    verifying = true;
+
+    try {
+      const audioBuffer = Buffer.concat(audioChunks);
+      audioChunks = [];
+
+      if (audioBuffer.length < SAMPLE_RATE) { // Less than 1s
+        return false;
+      }
+
+      // Import STT dynamically
+      const { createSTT } = await import("./stt.js");
+      const stt = createSTT(config);
+
+      // Transcribe the buffered audio
+      const transcript = await stt.transcribe(audioBuffer);
+      const lower = transcript.toLowerCase().trim();
+
+      console.log(`[wake-word] Whisper transcript: "${lower}"`);
+
+      // Check if the keyword is in the transcript
+      if (lower.includes(keyword)) {
+        console.log(`[wake-word] Keyword "${keyword}" detected!`);
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.warn(`[wake-word] Whisper verification failed: ${err}`);
+      return false;
+    } finally {
+      verifying = false;
+    }
+  }
+
   return {
     async start() {
       try {
-        // Use node:child_process to spawn a lightweight audio monitor
-        const { spawn } = await import("node:child_process");
+        const { spawn, execSync } = await import("node:child_process");
 
-        // Start arecord/sox to capture raw audio
-        const isMac = process.platform === "darwin";
+        // Check for available audio capture tools
+        let hasSox = false;
+        let hasFfmpeg = false;
+        try { execSync("which sox", { stdio: "ignore" }); hasSox = true; } catch {}
+        try { execSync("which ffmpeg", { stdio: "ignore" }); hasFfmpeg = true; } catch {}
+
+        if (!hasSox && !hasFfmpeg) {
+          console.warn("[wake-word] No audio capture tool found. Install sox or ffmpeg.");
+          console.warn("[wake-word] Falling back to manual trigger (Ctrl+K).");
+          return;
+        }
 
         let proc;
-        if (isMac) {
-          // macOS: use sox to capture raw audio from microphone
+        if (hasSox) {
           proc = spawn("sox", [
             "-d", "-t", "raw", "-r", "16000", "-e", "signed-integer",
             "-b", "16", "-c", "1", "-",
           ], { stdio: ["ignore", "pipe", "pipe"] });
         } else {
-          // Linux: use arecord
-          proc = spawn("arecord", [
-            "-f", "S16_LE", "-r", "16000", "-c", "1", "-t", "raw", "-q",
+          // ffmpeg fallback for macOS
+          proc = spawn("ffmpeg", [
+            "-f", "avfoundation", "-i", ":0",
+            "-ar", "16000", "-ac", "1", "-f", "s16le", "-",
           ], { stdio: ["ignore", "pipe", "pipe"] });
         }
 
         audioStream = proc.stdout;
         running = true;
 
-        // Monitor audio energy levels
         let energyBuffer = 0;
         let sampleCount = 0;
-        const ENERGY_THRESHOLD = sensitivity * 3000; // Adjust based on sensitivity
-        const CHECK_INTERVAL_MS = 200;
+        const ENERGY_THRESHOLD = sensitivity * 3000;
 
         audioStream.on("data", (chunk: Buffer) => {
           if (!running) return;
+
+          // Always keep audio in the rolling buffer
+          audioChunks.push(chunk);
+          const totalBytes = audioChunks.reduce((sum, c) => sum + c.length, 0);
+          while (totalBytes > MAX_BUFFER_BYTES && audioChunks.length > 1) {
+            audioChunks.shift();
+          }
 
           // Calculate RMS energy
           const samples = new Int16Array(chunk.buffer, chunk.byteOffset, chunk.byteLength / 2);
@@ -172,17 +229,18 @@ function createKeywordSpotter(config: KorvidConfig): WakeWordDetector {
           energyBuffer += rms;
           sampleCount++;
 
-          // Check energy every CHECK_INTERVAL_MS worth of samples (16000 Hz * 0.2s = 3200 samples)
           if (sampleCount >= 3200) {
             const avgEnergy = energyBuffer / sampleCount;
             energyBuffer = 0;
             sampleCount = 0;
 
-            // If energy exceeds threshold, someone might be speaking the wake word
-            // In a real implementation, you'd run Whisper here to verify
-            if (avgEnergy > ENERGY_THRESHOLD) {
-              console.log(`[wake-word] Energy spike detected (${Math.round(avgEnergy)}), triggering wake`);
-              wakeCallback?.();
+            if (avgEnergy > ENERGY_THRESHOLD && !verifying) {
+              console.log(`[wake-word] Energy spike (${Math.round(avgEnergy)}), verifying with Whisper...`);
+              verifyWithWhisper().then((detected) => {
+                if (detected) {
+                  wakeCallback?.();
+                }
+              });
             }
           }
         });

@@ -22,7 +22,7 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
       background: rgba(BRAND.color.surface, 0.4),
       backdropFilter: "blur(32px) saturate(1.5)",
       WebkitBackdropFilter: "blur(32px) saturate(1.5)",
-      borderBottom: `1px solid ${BRAND.color.border}`,
+      borderBottom: `1px solid ${BRAND.color["glass-border"]}`,
       fontFamily: BRAND.font.mono,
       zIndex: 100,
     }}>
@@ -40,6 +40,7 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
               ? `0 0 8px ${rgba(BRAND.color["text-muted"], 0.3)}`
               : `0 0 8px ${rgba(BRAND.color.ember, 0.4)}`,
           transition: "all 0.4s ease",
+          animation: !isIdle ? "statusPulse 2s ease-in-out infinite" : "none",
         }} />
         <span style={{
           fontSize: 15,
@@ -72,6 +73,7 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
             borderRadius: "50%",
             background: isOnline ? "#4ADE80" : BRAND.color.ember,
             boxShadow: isOnline ? "0 0 8px rgba(74,222,128,0.4)" : `0 0 8px ${rgba(BRAND.color.ember, 0.4)}`,
+            animation: isOnline ? "glowPulse 3s ease-in-out infinite" : "none",
           }} />
           <span style={{
             fontSize: 11,
@@ -89,6 +91,7 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
           <span style={{
             color: !isIdle ? BRAND.color.sheen : BRAND.color["text-muted"],
             fontSize: 10,
+            animation: !isIdle ? "sheenPulse 2s ease-in-out infinite" : "none",
           }}>
             {!isIdle ? "◐" : "○"}
           </span>
@@ -96,6 +99,7 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
             fontSize: 11,
             color: !isIdle ? BRAND.color.sheen : BRAND.color["text-secondary"],
             fontWeight: !isIdle ? 500 : 400,
+            transition: "color 0.3s ease",
           }}>
             {pipelineState}
           </span>

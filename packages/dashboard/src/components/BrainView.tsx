@@ -1,6 +1,6 @@
 import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Text, Line } from "@react-three/drei";
+import { Text, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { BRAND } from "../lib/brand.js";
 import type { MemoryNode } from "../lib/types.js";
@@ -38,6 +38,8 @@ function GraphNode({
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
     const t = clock.getElapsedTime();
+    const float = Math.sin(t * 0.8 + (node.x ?? 0) * 2) * 0.05;
+    meshRef.current.position.y = (node.y ?? 0) + float;
     if (isActive) {
       meshRef.current.scale.setScalar(1 + Math.sin(t * 3) * 0.15);
     } else {
@@ -51,18 +53,18 @@ function GraphNode({
         ref={meshRef}
         onClick={(e) => { e.stopPropagation(); onClick?.(); }}
       >
-        <sphereGeometry args={[0.3, 16, 16]} />
+        <sphereGeometry args={[0.15, 16, 16]} />
         <meshStandardMaterial
           color={color}
           emissive={isActive ? color : "#000000"}
-          emissiveIntensity={isActive ? 0.8 : 0}
+          emissiveIntensity={isActive ? 1.2 : 0}
           transparent
-          opacity={isActive ? 1 : 0.6}
+          opacity={isActive ? 1 : 0.5}
         />
       </mesh>
       <Text
-        position={[0, 0.5, 0]}
-        fontSize={0.12}
+        position={[0, 0.3, 0]}
+        fontSize={0.08}
         color={BRAND.color.white}
         anchorX="center"
         anchorY="bottom"
@@ -97,62 +99,109 @@ function GraphEdges({ nodes }: { nodes: MemoryNode[] }) {
             [edge.from.x ?? 0, edge.from.y ?? 0, edge.from.z ?? 0],
             [edge.to.x ?? 0, edge.to.y ?? 0, edge.to.z ?? 0],
           ]}
-          color={BRAND.color.border}
+          color={BRAND.color.sheen}
           lineWidth={1}
           transparent
-          opacity={0.3}
+          opacity={0.2}
         />
       ))}
     </>
   );
 }
 
-function ThinkingParticles() {
+function AmbientParticles({ count = 40 }: { count?: number }) {
   const groupRef = useRef<THREE.Group>(null);
-  const count = 20;
-  const positions = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 6;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 6;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 6;
-    }
-    return pos;
-  }, []);
+  const meshRefs = useRef<any[]>([]);
+
+  const particles = useMemo(() => {
+    return Array.from({ length: count }, (_, i) => ({
+      x: (Math.random() - 0.5) * 12,
+      y: (Math.random() - 0.5) * 8,
+      z: (Math.random() - 0.5) * 6 - 2,
+      speed: 0.1 + Math.random() * 0.3,
+      phase: Math.random() * Math.PI * 2,
+      size: 0.02 + Math.random() * 0.03,
+    }));
+  }, [count]);
 
   useFrame(({ clock }) => {
-    if (!groupRef.current) return;
     const t = clock.getElapsedTime();
-    const geo = groupRef.current.children[0] as THREE.Points;
-    if (geo?.geometry) {
-      const posAttr = geo.geometry.getAttribute("position") as THREE.BufferAttribute;
-      for (let i = 0; i < count; i++) {
-        posAttr.array[i * 3 + 1] += Math.sin(t + i) * 0.002;
-      }
-      posAttr.needsUpdate = true;
-    }
+    particles.forEach((p, i) => {
+      const mesh = meshRefs.current[i];
+      if (!mesh) return;
+      mesh.position.x = p.x + Math.sin(t * p.speed + p.phase) * 0.3;
+      mesh.position.y = p.y + Math.cos(t * p.speed * 0.7 + p.phase) * 0.2;
+      mesh.position.z = p.z + Math.sin(t * p.speed * 0.5 + p.phase * 2) * 0.1;
+      const m = mesh.material as THREE.MeshBasicMaterial;
+      m.opacity = 0.15 + Math.sin(t * 1.5 + p.phase) * 0.1;
+    });
   });
 
   return (
     <group ref={groupRef}>
-      <points>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[positions, 3]}
-            array={positions}
-            count={count}
-            itemSize={3}
+      {particles.map((p, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { if (el) meshRefs.current[i] = el; }}
+          position={[p.x, p.y, p.z]}
+        >
+          <sphereGeometry args={[p.size, 8, 8]} />
+          <meshBasicMaterial
+            color={BRAND.color.sheen}
+            transparent
+            opacity={0.2}
+            depthWrite={false}
           />
-        </bufferGeometry>
-        <pointsMaterial
-          color={BRAND.color.sheen}
-          size={0.04}
-          transparent
-          opacity={0.5}
-          sizeAttenuation
-        />
-      </points>
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function ThinkingParticles() {
+  const groupRef = useRef<THREE.Group>(null);
+  const count = 30;
+  const meshRefs = useRef<any[]>([]);
+
+  const particles = useMemo(() => {
+    return Array.from({ length: count }, (_, i) => ({
+      angle: (i / count) * Math.PI * 2,
+      radius: 1.5 + Math.random() * 0.5,
+      speed: 0.5 + Math.random() * 0.5,
+      y: (Math.random() - 0.5) * 2,
+    }));
+  }, [count]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    particles.forEach((p, i) => {
+      const mesh = meshRefs.current[i];
+      if (!mesh) return;
+      const angle = p.angle + t * p.speed;
+      mesh.position.x = Math.cos(angle) * p.radius;
+      mesh.position.z = Math.sin(angle) * p.radius;
+      mesh.position.y = p.y + Math.sin(t * 2 + i) * 0.3;
+      const m = mesh.material as THREE.MeshBasicMaterial;
+      m.opacity = 0.3 + Math.sin(t * 3 + i) * 0.2;
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {particles.map((p, i) => (
+        <mesh
+          key={i}
+          ref={(el) => { if (el) meshRefs.current[i] = el; }}
+        >
+          <sphereGeometry args={[0.025, 8, 8]} />
+          <meshBasicMaterial
+            color={BRAND.color.sheen}
+            transparent
+            opacity={0.4}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -170,8 +219,11 @@ function Scene({
 }) {
   return (
     <>
-      <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={0.5} />
+      <ambientLight intensity={0.15} />
+      <pointLight position={[5, 5, 5]} intensity={0.3} color={BRAND.color.sheen} />
+
+      <AmbientParticles count={memoryNodes.length > 0 ? 20 : 40} />
+
       <GraphEdges nodes={memoryNodes} />
       {memoryNodes.map((node) => (
         <GraphNode
@@ -181,13 +233,8 @@ function Scene({
           onClick={() => onNodeClick?.(node.id)}
         />
       ))}
+
       {pipelineState === "processing" && <ThinkingParticles />}
-      <OrbitControls
-        enableDamping
-        dampingFactor={0.1}
-        maxDistance={20}
-        minDistance={3}
-      />
     </>
   );
 }
@@ -202,10 +249,16 @@ export function BrainView({
   onNodeClick,
 }: BrainViewProps) {
   return (
-    <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+    <div style={{
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      pointerEvents: "none",
+    }}>
       <Canvas
         camera={{ position: [0, 0, 8], fov: 50 }}
-        style={{ background: BRAND.color.bg }}
+        style={{ background: "transparent" }}
+        gl={{ alpha: true, antialias: true }}
       >
         <Scene
           memoryNodes={memoryNodes}
@@ -216,23 +269,25 @@ export function BrainView({
       </Canvas>
 
       {/* Legend */}
-      <div style={{
-        position: "absolute",
-        top: 12,
-        right: 16,
-        display: "flex",
-        gap: 10,
-        fontSize: 10,
-        fontFamily: BRAND.font.mono,
-        color: BRAND.color["text-muted"],
-      }}>
-        {Object.entries(NODE_COLORS).map(([type, color]) => (
-          <span key={type} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-            <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, display: "inline-block" }} />
-            {type}
-          </span>
-        ))}
-      </div>
+      {memoryNodes.length > 0 && (
+        <div style={{
+          position: "absolute",
+          top: 12,
+          right: 16,
+          display: "flex",
+          gap: 10,
+          fontSize: 10,
+          fontFamily: BRAND.font.mono,
+          color: BRAND.color["text-muted"],
+        }}>
+          {Object.entries(NODE_COLORS).map(([type, color]) => (
+            <span key={type} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, display: "inline-block" }} />
+              {type}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
