@@ -35,40 +35,43 @@ program.addCommand(doctorCommand);
 program.addCommand(modelsCommand);
 
 // ── Bare command routing ──────────────────────────────────────────
-const args = process.argv.slice(2);
-const hasSubcommand = args.length > 0 && !args[0].startsWith("-");
+async function main() {
+  const args = process.argv.slice(2);
+  const hasSubcommand = args.length > 0 && !args[0].startsWith("-");
 
-if (!hasSubcommand) {
-  // No subcommand — route based on config state
-  if (args.includes("--help") || args.includes("-h")) {
-    console.log(brandBoot());
-    console.log(brandFooter());
-    console.log("");
-    program.help();
-  } else if (!configExists()) {
-    // No config → run init
-    console.log(brandBoot());
-    program.parseAsync(["node", "korvid", "init"]);
-  } else {
-    try {
-      const config = loadConfig();
-      // Config exists and valid → show brand + hint
+  if (!hasSubcommand) {
+    if (args.includes("--help") || args.includes("-h")) {
       console.log(brandBoot());
       console.log(brandFooter());
       console.log("");
-      console.log("  Korvid is configured.");
-      console.log("");
-      console.log("  Quick start:");
-      console.log("    korvid voice    — start talking");
-      console.log("    korvid doctor   — check system");
-      console.log("    korvid models   — manage models");
-      console.log("");
-    } catch {
-      // Config invalid → run doctor
+      program.help();
+    } else if (!configExists()) {
       console.log(brandBoot());
-      program.parseAsync(["node", "korvid", "doctor"]);
+      await program.parseAsync(["node", "korvid", "init"]);
+    } else {
+      try {
+        const config = loadConfig();
+        console.log(brandBoot());
+        console.log(brandFooter());
+        console.log("");
+        console.log("  Korvid is configured.");
+        console.log("");
+        console.log("  Quick start:");
+        console.log("    korvid voice    — start talking");
+        console.log("    korvid doctor   — check system");
+        console.log("    korvid models   — manage models");
+        console.log("");
+      } catch {
+        console.log(brandBoot());
+        await program.parseAsync(["node", "korvid", "doctor"]);
+      }
     }
+  } else {
+    program.parse();
   }
-} else {
-  program.parse();
 }
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -2,6 +2,7 @@ import { Command } from "commander";
 import * as p from "@clack/prompts";
 import { execFileSync } from "node:child_process";
 import { loadConfig } from "@korvid/shared/config-file.js";
+import { platformHint } from "../utils.js";
 
 interface CheckResult {
   name: string;
@@ -18,13 +19,6 @@ function checkCmd(name: string, cmd: string, args: string[], purpose: string, in
   } catch {
     return { name, installed: false, purpose, installCmd };
   }
-}
-
-function platformHint(tool: string, brewPkg?: string): string | undefined {
-  const pl = process.platform;
-  if (pl === "darwin") return `brew install ${brewPkg ?? tool}`;
-  if (pl === "win32") return `choco install ${brewPkg ?? tool}`;
-  return `apt install ${brewPkg ?? tool}`;
 }
 
 function checkDocker(): CheckResult {

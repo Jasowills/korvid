@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import * as p from "@clack/prompts";
-import { execFileSync } from "node:child_process";
 import { loadConfig, writeConfig, configExists } from "@korvid/shared/config-file.js";
+import { PROVIDER_DEFAULTS, getOllamaModels } from "../utils.js";
 
 function cancelGuard<T>(value: T | symbol): T | never {
   if (p.isCancel(value)) {
@@ -10,32 +10,6 @@ function cancelGuard<T>(value: T | symbol): T | never {
   }
   return value as T;
 }
-
-function getOllamaModels(): string[] {
-  try {
-    const res = execFileSync("ollama", ["list"], {
-      timeout: 5000,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return res
-      .trim()
-      .split("\n")
-      .slice(1)
-      .map((l) => l.split(/\s+/)[0])
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-const PROVIDER_DEFAULTS: Record<string, string> = {
-  anthropic: "claude-sonnet-4-6",
-  openai: "gpt-4o",
-  google: "gemini-2.5-flash",
-  groq: "llama-3.1-8b-instant",
-  openrouter: "openrouter/auto",
-};
 
 export const modelsCommand = new Command("models")
   .description("Manage reasoning models")

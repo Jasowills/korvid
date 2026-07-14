@@ -4,8 +4,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 import { KorvidConfigSchema, type KorvidConfig } from "@korvid/shared";
 import { writeConfig, loadConfig, configExists, getConfigPath } from "@korvid/shared/config-file.js";
+import {
+  ENV_KEY_MAP, PROVIDER_DEFAULTS, FAST_MODEL_DEFAULTS,
+  detectEnvKey, checkInstalled, platformHint, getOllamaModels,
+} from "../utils.js";
 
 function cancelGuard<T>(value: T | symbol): T | never {
   if (p.isCancel(value)) {
@@ -15,75 +20,6 @@ function cancelGuard<T>(value: T | symbol): T | never {
   return value as T;
 }
 
-function checkInstalled(cmd: string, args: string[]): boolean {
-  try {
-    execFileSync(cmd, args, { timeout: 5000, stdio: "pipe" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function platformHint(tool: string, brewPkg?: string): string {
-  const pl = process.platform;
-  if (pl === "darwin") return `brew install ${brewPkg ?? tool}`;
-  if (pl === "win32") return `choco install ${brewPkg ?? tool}`;
-  return `apt install ${brewPkg ?? tool}`;
-}
-
-// ── Env var auto-detection ───────────────────────────────────────
-const ENV_KEY_MAP: Record<string, string> = {
-  anthropic: "ANTHROPIC_API_KEY",
-  openai: "OPENAI_API_KEY",
-  google: "GOOGLE_API_KEY",
-  groq: "GROQ_API_KEY",
-  openrouter: "OPENROUTER_API_KEY",
-  deepgram: "DEEPGRAM_API_KEY",
-  elevenlabs: "ELEVENLABS_API_KEY",
-  cartesia: "CARTESIA_API_KEY",
-};
-
-function detectEnvKey(provider: string): string | undefined {
-  const envVar = ENV_KEY_MAP[provider];
-  if (!envVar) return undefined;
-  const val = process.env[envVar];
-  return val && val.length > 0 ? val : undefined;
-}
-
-// ── Ollama model catalog ─────────────────────────────────────────
-function getOllamaModels(): string[] {
-  try {
-    const res = execFileSync("ollama", ["list"], {
-      timeout: 5000,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return res
-      .trim()
-      .split("\n")
-      .slice(1)
-      .map((l) => l.split(/\s+/)[0])
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-// ── Provider defaults ────────────────────────────────────────────
-const PROVIDER_DEFAULTS: Record<string, string> = {
-  anthropic: "claude-sonnet-4-6",
-  openai: "gpt-4o",
-  google: "gemini-2.5-flash",
-  groq: "llama-3.1-8b-instant",
-  openrouter: "openrouter/auto",
-};
-
-const FAST_MODEL_DEFAULTS: Record<string, string> = {
-  groq: "llama-3.1-8b-instant",
-  ollama: "llama3.2",
-  google: "gemini-2.5-flash",
-};
-
 // ── Init command ─────────────────────────────────────────────────
 export const initCommand = new Command("init")
   .description("Initialize Korvid configuration")
@@ -91,10 +27,35 @@ export const initCommand = new Command("init")
   .action(async (opts) => {
     p.intro("Korvid");
 
-    const existingConfig = configExists() ? loadConfig() : null;
+    let existingConfig: KorvidConfig | null = null;
+    let configCorrupted = false;
+    if (configExists()) {
+      try {
+        existingConfig = loadConfig();
+      } catch {
+        configCorrupted = true;
+      }
+    }
 
     // ── Re-run handling ─────────────────────────────────────────
-    if (existingConfig && !opts.defaults) {
+    if (configCorrupted) {
+      p.log.warn("Config file is corrupted or invalid.");
+      const action = cancelGuard(
+        await p.select({
+          message: "What would you like to do?",
+          options: [
+            { value: "overwrite", label: "Start fresh", hint: "Delete and recreate config" },
+            { value: "doctor", label: "Run diagnostics", hint: "Exit and run korvid doctor" },
+          ],
+        })
+      );
+      if (action === "doctor") {
+        p.outro("Run: korvid doctor");
+        return;
+      }
+    }
+
+    if (existingConfig && !configCorrupted && !opts.defaults) {
       const action = cancelGuard(
         await p.select({
           message: "Config already exists. What would you like to do?",
@@ -166,6 +127,9 @@ export const initCommand = new Command("init")
 
     // ── Messaging setup ─────────────────────────────────────────
     await offerMessagingSetup(config);
+
+    // ── Write config again (messaging may have changed it) ──────
+    writeConfig(config);
 
     // ── Closing ─────────────────────────────────────────────────
     printNextSteps(config);
@@ -673,10 +637,5 @@ async function runSystemChecks(config: KorvidConfig) {
 
 // ── Token generator ──────────────────────────────────────────────
 function generateToken(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 32; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return randomBytes(24).toString("base64url");
 }
