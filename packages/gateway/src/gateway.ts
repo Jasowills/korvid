@@ -422,6 +422,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
                   workflows: config.workflows ?? {},
                   voicePersonality: config.voicePersonality ?? {},
                   triggers: config.triggers ?? {},
+                  viz: null,
                 },
               }));
             } else if (msg.type === "interrupt") {
