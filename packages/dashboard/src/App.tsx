@@ -30,20 +30,38 @@ const PANEL_STYLE: React.CSSProperties = {
 export function App() {
   const state = useGatewayState();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [bootSoundPlayed, setBootSoundPlayed] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const pendingBootSound = useRef(false);
 
+  // Create AudioContext on first user gesture (browser autoplay policy)
   useEffect(() => {
-    if (state.connected && !bootSoundPlayed) {
-      setBootSoundPlayed(true);
+    const initAudio = () => {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+        setAudioReady(true);
+      }
+    };
+    document.addEventListener("click", initAudio, { once: true });
+    document.addEventListener("keydown", initAudio, { once: true });
+    return () => {
+      document.removeEventListener("click", initAudio);
+      document.removeEventListener("keydown", initAudio);
+    };
+  }, []);
+
+  // Play boot sound once audio is ready AND connected
+  useEffect(() => {
+    if (state.connected && audioReady && !pendingBootSound.current) {
+      pendingBootSound.current = true;
       playBootSound();
     }
-  }, [state.connected, bootSoundPlayed]);
+  }, [state.connected, audioReady]);
 
   function playBootSound() {
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
     try {
-      const ctx = new AudioContext();
-      audioCtxRef.current = ctx;
       const now = ctx.currentTime;
 
       const osc1 = ctx.createOscillator();
@@ -90,8 +108,9 @@ export function App() {
   }
 
   function playClapSound() {
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
     try {
-      const ctx = audioCtxRef.current ?? new AudioContext();
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();

@@ -57,6 +57,18 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
     return token === authToken;
   }
 
+  // Check if request is from same origin (dashboard served from gateway)
+  function isSameOrigin(req: http.IncomingMessage): boolean {
+    const host = req.headers.host ?? "";
+    return host === `127.0.0.1:${config.gateway.port}` || host === `localhost:${config.gateway.port}`;
+  }
+
+  function requireAuth(req: http.IncomingMessage): boolean {
+    if (isSameOrigin(req)) return false;
+    const token = req.headers["x-auth-token"] as string;
+    return !authenticateClient(null as any, token);
+  }
+
   const ALLOWED_ORIGINS = new Set([
     `http://127.0.0.1:${config.gateway.port}`,
     `http://localhost:${config.gateway.port}`,
@@ -117,8 +129,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
         }
 
         if (req.url === "/api/token" && req.method === "POST") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -129,8 +140,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
         }
 
         if (req.url === "/api/memory") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -144,8 +154,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
         }
 
         if (req.url === "/api/delegation-events") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -157,8 +166,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Tool permissions API
         if (req.url === "/api/tool-permissions") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -202,8 +210,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Memory API
         if (req.url === "/api/memory/stats") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -214,8 +221,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
         }
 
         if (req.url === "/api/memory/consolidate" && req.method === "POST") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -229,8 +235,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Suggestions API
         if (req.url === "/api/suggestions") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -242,8 +247,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Integrations API
         if (req.url === "/api/integrations/status") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -257,8 +261,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Triggers API
         if (req.url === "/api/triggers") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -287,8 +290,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Workflows API
         if (req.url === "/api/workflows") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -300,8 +302,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Visualize API — push visualization data to dashboard
         if (req.url === "/api/visualize" && req.method === "POST") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
@@ -324,8 +325,7 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
 
         // Voice personality API
         if (req.url === "/api/voice-personality") {
-          const token = req.headers["x-auth-token"] as string;
-          if (!authenticateClient(null as any, token)) {
+          if (requireAuth(req)) {
             res.statusCode = 401;
             res.end(JSON.stringify({ error: "Unauthorized" }));
             return;
