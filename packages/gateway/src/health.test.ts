@@ -40,8 +40,8 @@ const testConfig: KorvidConfig = {
     edgesPath: "~/.korvid/memory/edges",
   },
   messaging: {
-    whatsapp: { enabled: false, allowFrom: [] },
-    telegram: { enabled: false, allowFrom: [] },
+    whatsapp: { enabled: false, authDir: "", dmPolicy: "pairing" as const, allowFrom: [] },
+    telegram: { enabled: false, dmPolicy: "pairing" as const, allowFrom: [] },
   },
   suggestions: { enabled: false, checkIntervalMs: 300000, maxSuggestions: 5, useReasoning: false },
   integrations: { calendar: { enabled: false, provider: "ical" }, email: { enabled: false, provider: "gmail" } },

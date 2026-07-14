@@ -1,8 +1,8 @@
 export const MESSAGING_VERSION = "0.1.0";
 
 export { type Message, type MessageBridge, type MessageResult, type MessageQueueItem } from "./types.js";
-export { createWhatsAppBridge, handleWhatsAppWebhook } from "./whatsapp.js";
-export { createTelegramBridge } from "./telegram.js";
+export { createWhatsAppBridge } from "./whatsapp.js";
+export { createTelegramBridge, validateTelegramToken } from "./telegram.js";
 export { createMessageRelay, type MessageRelay } from "./relay.js";
 
 import type { KorvidConfig } from "@korvid/shared";

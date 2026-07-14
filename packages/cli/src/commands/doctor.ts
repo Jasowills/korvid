@@ -164,6 +164,16 @@ export const doctorCommand = new Command("doctor")
           allGood = false;
         }
       }
+
+      // Bun detection — WhatsApp and Telegram require Node
+      if (config.messaging.whatsapp.enabled || config.messaging.telegram.enabled) {
+        const isBun = "Bun" in globalThis;
+        if (isBun) {
+          configLines.push("  \x1b[38;2;255;107;74m✕\x1b[0m messaging channels require Node.js (not Bun)");
+          configLines.push("    \x1b[2mWhatsApp and Telegram use native Node modules\x1b[0m");
+          allGood = false;
+        }
+      }
     } catch {
       configLines.push("  \x1b[38;2;255;107;74m✕\x1b[0m no config");
       configLines.push("    \x1b[2mrun: korvid init\x1b[0m");

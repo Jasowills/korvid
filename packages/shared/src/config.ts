@@ -151,12 +151,15 @@ const GatewayConfigSchema = z.object({
 
 // ── Messaging Config ───────────────────────────────────────────────
 
+const DmPolicySchema = z.enum(["pairing", "allowlist"]);
+
 const MessagingConfigSchema = z.object({
   whatsapp: z
     .object({
       enabled: z.boolean().default(false),
-      botToken: z.string().optional(),
-      appSecret: z.string().optional(),
+      accountId: z.string().optional(),
+      authDir: z.string().default("~/.korvid/credentials/whatsapp"),
+      dmPolicy: DmPolicySchema.default("pairing"),
       allowFrom: z.array(z.string()).default([]),
     })
     .default({ enabled: false }),
@@ -164,6 +167,7 @@ const MessagingConfigSchema = z.object({
     .object({
       enabled: z.boolean().default(false),
       botToken: z.string().optional(),
+      dmPolicy: DmPolicySchema.default("pairing"),
       allowFrom: z.array(z.string()).default([]),
     })
     .default({ enabled: false }),

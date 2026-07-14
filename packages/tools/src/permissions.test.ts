@@ -11,7 +11,7 @@ const mockConfig: KorvidConfig = {
   delegation: { maxAttempts: 3, maxWallClockMinutes: 30, maxCostUsd: 5, sandboxImage: "", networkAllowlist: [] },
   safety: { requireConfirmationFor: [], budgetCapUsd: 50, budgetWarnPercent: 80, toolPermissions: { enabled: true, allow: [], deny: [], requireConfirmation: [] } },
   memory: { noMemoryList: [], coreMemoryPath: "", episodicMemoryPath: "", edgesPath: "" },
-  messaging: { whatsapp: { enabled: false, allowFrom: [] }, telegram: { enabled: false, allowFrom: [] } },
+  messaging: { whatsapp: { enabled: false, authDir: "", dmPolicy: "pairing" as const, allowFrom: [] }, telegram: { enabled: false, dmPolicy: "pairing" as const, allowFrom: [] } },
   suggestions: { enabled: false, checkIntervalMs: 300000, maxSuggestions: 5, useReasoning: false },
   integrations: { calendar: { enabled: false, provider: "ical" }, email: { enabled: false, provider: "gmail" } },
   workflows: { enabled: false, maxConcurrent: 3, defaultTimeoutMs: 60000 },

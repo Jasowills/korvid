@@ -1,39 +1,38 @@
 import { Command } from "commander";
-import chalk from "chalk";
+import * as p from "@clack/prompts";
 import { loadConfig } from "@korvid/shared/config-file.js";
 import { createMessagingSystem } from "@korvid/messaging";
-import { STATUS_GLYPH } from "../brand.js";
 
 export const messagingCommand = new Command("messaging")
-  .description("Manage messaging bridges")
-  .option("--status", "Show bridge status")
+  .description("Start messaging bridges (legacy — prefer 'korvid channels')")
   .option("--start", "Start messaging bridges")
   .action(async (opts) => {
-    console.log(chalk.dim("\n  messaging\n"));
+    p.intro("Korvid Messaging");
 
     let config;
     try {
       config = loadConfig();
     } catch (err) {
-      console.error(chalk.hex("#FF6B4A")(`  ${STATUS_GLYPH.error} ${err instanceof Error ? err.message : err}`));
+      p.log.error(err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
 
-    const system = createMessagingSystem(config);
+    const wa = config.messaging.whatsapp;
+    const tg = config.messaging.telegram;
+    const lines: string[] = [];
+    lines.push(`  ${wa.enabled ? "\x1b[38;2;124;140;255m●\x1b[0m" : "\x1b[2m○\x1b[0m"} WhatsApp: ${wa.enabled ? "enabled" : "disabled"}`);
+    if (wa.enabled) lines.push(`    DM policy: ${wa.dmPolicy}`);
+    lines.push(`  ${tg.enabled ? "\x1b[38;2;124;140;255m●\x1b[0m" : "\x1b[2m○\x1b[0m"} Telegram: ${tg.enabled ? "enabled" : "disabled"}`);
+    if (tg.enabled) lines.push(`    DM policy: ${tg.dmPolicy}`);
 
-    if (opts.status || (!opts.start)) {
-      console.log(chalk.dim("  bridges:"));
-      console.log(`  whatsapp: ${config.messaging.whatsapp.enabled ? chalk.hex("#7C8CFF")(STATUS_GLYPH.active) : chalk.dim(STATUS_GLYPH.idle)} ${chalk.dim(config.messaging.whatsapp.enabled ? "enabled" : "disabled")}`);
-      console.log(`  telegram: ${config.messaging.telegram.enabled ? chalk.hex("#7C8CFF")(STATUS_GLYPH.active) : chalk.dim(STATUS_GLYPH.idle)} ${chalk.dim(config.messaging.telegram.enabled ? "enabled" : "disabled")}`);
-      console.log(chalk.dim(`  active: ${system.bridges.length}`));
-      console.log();
-    }
+    p.note(lines.join("\n"), "Channels");
 
     if (opts.start) {
-      console.log(chalk.dim("  starting bridges..."));
+      const system = createMessagingSystem(config);
+      const s = p.spinner();
+      s.start("Starting bridges...");
       await system.start();
-      console.log(chalk.hex("#7C8CFF")(`  ${STATUS_GLYPH.active} bridges running`));
-      console.log(chalk.dim("  Ctrl+C to stop\n"));
+      s.stop("Bridges running");
 
       process.on("SIGINT", async () => {
         await system.stop();
@@ -41,5 +40,10 @@ export const messagingCommand = new Command("messaging")
       });
 
       await new Promise(() => {});
+    } else {
+      p.log.info("Start with: korvid messaging --start");
+      p.log.info("Manage channels: korvid channels status");
     }
+
+    p.outro("");
   });

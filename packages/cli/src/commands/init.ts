@@ -533,7 +533,7 @@ async function offerMessagingSetup(config: KorvidConfig): Promise<void> {
   );
 
   if (!setup) {
-    p.log.info("Skipped. Run: korvid messaging");
+    p.log.info("Skipped. Run: korvid channels add");
     return;
   }
 
@@ -541,8 +541,8 @@ async function offerMessagingSetup(config: KorvidConfig): Promise<void> {
     await p.select({
       message: "Which channel?",
       options: [
-        { value: "whatsapp", label: "WhatsApp", hint: "Business API or WhatsApp Web" },
-        { value: "telegram", label: "Telegram", hint: "Bot token required" },
+        { value: "whatsapp", label: "WhatsApp", hint: "QR code linking (like WhatsApp Web)" },
+        { value: "telegram", label: "Telegram", hint: "Bot token from @BotFather" },
       ],
     })
   );
@@ -551,27 +551,45 @@ async function offerMessagingSetup(config: KorvidConfig): Promise<void> {
 
   if (channel === "telegram") {
     const botToken = cancelGuard(await p.password({ message: "Telegram bot token:", mask: "*" }));
-    s.start("Validating Telegram bot token");
-    // Basic format check
-    if (/^\d+:[A-Za-z0-9_-]+$/.test(botToken)) {
-      s.stop("Token format valid");
-      config.messaging.telegram = { enabled: true, botToken, allowFrom: [] };
+    s.start("Validating bot token against Telegram API...");
+    const { validateTelegramToken } = await import("@korvid/messaging");
+    const result = await validateTelegramToken(botToken);
+    if (result.ok) {
+      s.stop(`Bot verified: @${result.botName}`);
+      const dmPolicy = cancelGuard(
+        await p.select({
+          message: "DM security posture?",
+          options: [
+            { value: "pairing", label: "Pairing (Recommended)" },
+            { value: "allowlist", label: "Allowlist (pre-approved IDs only)" },
+          ],
+          initialValue: "pairing",
+        })
+      );
+      let allowFrom: string[] = [];
+      if (dmPolicy === "allowlist") {
+        const ids = cancelGuard(
+          await p.text({
+            message: "Comma-separated Telegram user IDs:",
+            placeholder: "123456789,987654321",
+          })
+        );
+        allowFrom = ids.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      config.messaging.telegram = { enabled: true, botToken, dmPolicy: dmPolicy as "pairing" | "allowlist", allowFrom };
       p.log.info("Telegram configured. Send /start to your bot to begin.");
     } else {
-      s.stop("Invalid token format");
-      p.log.warn("Token format looks wrong. You can reconfigure later: korvid messaging");
+      s.stop("Token validation failed");
+      p.log.error(`Error: ${result.error}`);
+      p.log.warn("You can reconfigure later: korvid channels add --channel telegram");
     }
   } else {
-    const botToken = cancelGuard(await p.password({ message: "WhatsApp Business API token:", mask: "*" }));
-    s.start("Validating WhatsApp credentials");
-    if (botToken.length > 10) {
-      s.stop("Credentials accepted");
-      config.messaging.whatsapp = { enabled: true, botToken, allowFrom: [] };
-      p.log.info("WhatsApp configured.");
-    } else {
-      s.stop("Invalid credentials");
-      p.log.warn("Reconfigure later: korvid messaging");
-    }
+    p.log.info("WhatsApp uses QR linking (like WhatsApp Web).");
+    p.log.info("You'll scan a QR code with your phone → Settings → Linked Devices.");
+    p.log.info("Use a real phone number (VoIP/virtual numbers may be blocked).");
+    p.log.info("");
+    p.log.info("Run this after the gateway starts: korvid channels login --channel whatsapp");
+    config.messaging.whatsapp = { enabled: true, dmPolicy: "pairing", allowFrom: [], authDir: "~/.korvid/credentials/whatsapp" };
   }
 }
 
@@ -590,7 +608,7 @@ function printNextSteps(config: KorvidConfig): void {
   steps.push("Diagnostics:  korvid doctor");
   steps.push("Models:        korvid models list");
   if (!config.messaging.whatsapp?.enabled && !config.messaging.telegram?.enabled) {
-    steps.push("Messaging:     korvid messaging");
+    steps.push("Channels:      korvid channels add");
   }
 
   p.note(steps.join("\n"), "Next steps");

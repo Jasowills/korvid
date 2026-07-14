@@ -3,6 +3,7 @@ packages:
   - "site"
 allowBuilds:
   '@google/genai': true
+  '@whiskeysockets/baileys': true
   better-sqlite3: true
   cpu-features: true
   esbuild: true
