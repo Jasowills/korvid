@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 export type AgentId = "opencode" | "claude" | "unknown";
 
@@ -15,28 +15,33 @@ const AGENT_PROBES: { id: AgentId; name: string; command: string; versionFlag: s
   { id: "claude", name: "Claude Code", command: "claude", versionFlag: "--version" },
 ];
 
+function findBinary(name: string): string | null {
+  try {
+    const cmd = process.platform === "win32" ? "where" : "which";
+    return execFileSync(cmd, [name], { timeout: 3000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  } catch {
+    return null;
+  }
+}
+
 export function detectAgents(): AgentInfo[] {
   return AGENT_PROBES.map((probe) => {
     try {
-      const output = execSync(`${probe.command} ${probe.versionFlag}`, {
+      const output = execFileSync(probe.command, [probe.versionFlag], {
         timeout: 5000,
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
       }).trim();
 
       const versionMatch = output.match(/(\d+\.\d+\.\d+)/);
-      const whichPath = execSync(`which ${probe.command}`, {
-        timeout: 3000,
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }).trim();
+      const whichPath = findBinary(probe.command);
 
       return {
         id: probe.id,
         name: probe.name,
         available: true,
         version: versionMatch?.[1] ?? output.split("\n")[0],
-        path: whichPath,
+        path: whichPath ?? undefined,
       };
     } catch {
       return {

@@ -2,9 +2,7 @@ import { execFileSync } from "node:child_process";
 import { z } from "zod";
 import type { Tool } from "./types.js";
 
-const BLOCKED_PATTERNS = [/rm\s+(-\w*\s+)*\/($|\s)/, /mkfs/, /dd\s+if=/, /\:\(\)\{.*\|\:.*\}\;/
-
-];
+const BLOCKED_PATTERNS = [/rm\s+(-\w*\s+)*\/($|\s)/, /mkfs/, /dd\s+if=/, /\:\(\)\{.*\|\:.*\}\;/];
 
 const runCommandParams = z.object({
   command: z.string().min(1).describe("Shell command to execute"),
@@ -31,9 +29,11 @@ export const runCommandTool: Tool = {
     const timeout = Math.min(p.timeout ?? 30000, 60000);
 
     try {
-      // Use sh -c to execute, but the command itself comes from a trusted source (LLM output)
-      // and is validated against blocklist patterns above
-      const result = execFileSync("sh", ["-c", p.command], {
+      const isWin = process.platform === "win32";
+      const shell = isWin ? "cmd.exe" : "sh";
+      const flag = isWin ? "/c" : "-c";
+
+      const result = execFileSync(shell, [flag, p.command], {
         timeout,
         encoding: "utf-8",
         cwd: p.cwd,

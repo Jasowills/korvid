@@ -33,18 +33,27 @@ export function createAudioCapture(): AudioCapture {
       tmpFile = join(captureDir, `rec-${Date.now()}.wav`);
 
       try {
-        currentProcess = spawn("sox", [
-          "-d",
-          "-r", "16000",
-          "-c", "1",
-          "-b", "16",
-          tmpFile,
-        ]);
+        const platform = process.platform;
+        let soxArgs: string[];
+
+        if (platform === "win32") {
+          // Windows sox needs explicit device name
+          soxArgs = ["-t", "waveaudio", "-d", "-r", "16000", "-c", "1", "-b", "16", tmpFile];
+        } else {
+          soxArgs = ["-d", "-r", "16000", "-c", "1", "-b", "16", tmpFile];
+        }
+
+        currentProcess = spawn("sox", soxArgs);
 
         currentProcess.on("error", () => {
           try {
+            const platform = process.platform;
+            const ffmpegFormat = platform === "darwin" ? "avfoundation"
+              : platform === "win32" ? "dshow"
+              : "pulse";
+
             currentProcess = spawn("ffmpeg", [
-              "-f", "avfoundation",
+              "-f", ffmpegFormat,
               "-i", "",
               "-ar", "16000",
               "-ac", "1",
@@ -104,14 +113,12 @@ export async function captureAudio(durationMs = 5000): Promise<Buffer> {
   const outFile = join(captureDir, `shot-${Date.now()}.wav`);
 
   try {
-    execFileSync("sox", [
-      "-d",
-      "-r", "16000",
-      "-c", "1",
-      "-b", "16",
-      outFile,
-      "trim", "0", String(durationMs / 1000),
-    ], { timeout: durationMs + 2000, stdio: "pipe" });
+    const platform = process.platform;
+    const soxArgs = platform === "win32"
+      ? ["-t", "waveaudio", "-d", "-r", "16000", "-c", "1", "-b", "16", outFile, "trim", "0", String(durationMs / 1000)]
+      : ["-d", "-r", "16000", "-c", "1", "-b", "16", outFile, "trim", "0", String(durationMs / 1000)];
+
+    execFileSync("sox", soxArgs, { timeout: durationMs + 2000, stdio: "pipe" });
 
     const buffer = readFileSync(outFile);
     try { unlinkSync(outFile); } catch {}

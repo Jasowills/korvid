@@ -1,7 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
-import { mkdirSync, existsSync, rmSync } from "node:fs";
+import { mkdirSync, existsSync, rmSync, cpSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { tmpdir } from "node:os";
+import { tmpdir, homedir } from "node:os";
 
 export interface Sandbox {
   id: string;
@@ -48,10 +48,7 @@ async function createGitWorktree(workDir: string, workspacePath?: string) {
       timeout: 30000,
     });
   } catch {
-    execFileSync("cp", ["-r", `${workspacePath}/.`, `${workDir}/`], {
-      stdio: "pipe",
-      timeout: 60000,
-    });
+    cpSync(workspacePath, workDir, { recursive: true });
   }
 }
 
@@ -86,16 +83,20 @@ function runInDocker(containerName: string, command: string, timeout: number) {
 
 function runLocal(workDir: string, command: string, timeout: number, env?: Record<string, string>) {
   return new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
-    // Only pass PATH and essential env vars — never leak the full process.env
+    // Only pass safe env vars — never leak the full process.env
     const safeEnv: Record<string, string> = {
-      PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
-      HOME: process.env.HOME ?? "/tmp",
-      USER: process.env.USER ?? "root",
+      PATH: process.env.PATH ?? (process.platform === "win32" ? "C:\\Windows\\system32;C:\\Windows" : "/usr/local/bin:/usr/bin:/bin"),
+      HOME: process.env.HOME ?? process.env.USERPROFILE ?? homedir(),
+      USER: process.env.USER ?? process.env.USERNAME ?? "unknown",
       NODE_ENV: process.env.NODE_ENV ?? "production",
       ...(env ?? {}),
     };
 
-    const proc = spawn("sh", ["-c", command], {
+    const isWin = process.platform === "win32";
+    const shell = isWin ? "cmd.exe" : "sh";
+    const flag = isWin ? "/c" : "-c";
+
+    const proc = spawn(shell, [flag, command], {
       cwd: workDir,
       env: safeEnv,
       stdio: ["pipe", "pipe", "pipe"],

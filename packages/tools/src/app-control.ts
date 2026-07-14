@@ -16,13 +16,12 @@ const listAppsParams = z.object({
 });
 
 function validateAppName(name: string): boolean {
-  // Only allow alphanumeric, spaces, hyphens, dots, and common app name chars
   return /^[a-zA-Z0-9\s.\-_]+$/.test(name);
 }
 
 export const openAppTool: Tool = {
   name: "open_app",
-  description: "Open an application on the Mac",
+  description: "Open an application",
   parameters: openAppParams,
   dangerous: false,
   category: "app",
@@ -32,7 +31,14 @@ export const openAppTool: Tool = {
       return { success: false, output: "", error: "Invalid application name" };
     }
     try {
-      execFileSync("open", ["-a", p.name], { timeout: 10000, stdio: "pipe" });
+      const platform = process.platform;
+      if (platform === "darwin") {
+        execFileSync("open", ["-a", p.name], { timeout: 10000, stdio: "pipe" });
+      } else if (platform === "win32") {
+        execFileSync("cmd", ["/c", "start", "", p.name], { timeout: 10000, stdio: "pipe" });
+      } else {
+        execFileSync("xdg-open", [p.name], { timeout: 10000, stdio: "pipe" });
+      }
       return { success: true, output: `Opened ${p.name}` };
     } catch (err) {
       return { success: false, output: "", error: `Failed to open ${p.name}: ${err instanceof Error ? err.message : String(err)}` };
@@ -42,7 +48,7 @@ export const openAppTool: Tool = {
 
 export const closeAppTool: Tool = {
   name: "close_app",
-  description: "Close/quit an application on the Mac",
+  description: "Close/quit an application",
   parameters: closeAppParams,
   dangerous: true,
   category: "app",
@@ -52,13 +58,16 @@ export const closeAppTool: Tool = {
       return { success: false, output: "", error: "Invalid application name" };
     }
     try {
-      if (p.force) {
+      const platform = process.platform;
+      if (platform === "win32") {
+        const flag = p.force ? "/F" : "";
+        execFileSync("taskkill", ["/IM", `${p.name}.exe`, flag].filter(Boolean), { timeout: 10000, stdio: "pipe" });
+      } else if (p.force) {
         execFileSync("killall", ["-9", p.name], { timeout: 10000, stdio: "pipe" });
       } else {
         try {
           execFileSync("killall", [p.name], { timeout: 5000, stdio: "pipe" });
         } catch {
-          // SIGTERM may not work, escalate to SIGKILL
           execFileSync("killall", ["-9", p.name], { timeout: 5000, stdio: "pipe" });
         }
       }
@@ -78,8 +87,20 @@ export const listAppsTool: Tool = {
   async execute(params) {
     const p = listAppsParams.parse(params);
     try {
-      const output = execFileSync("ps", ["-axco", "comm"], { timeout: 5000, encoding: "utf-8" });
-      let apps = output.split("\n").filter((l) => l.trim() && !l.startsWith("-"));
+      const platform = process.platform;
+      let output: string;
+      if (platform === "win32") {
+        output = execFileSync("tasklist", ["/FO", "CSV", "/NH"], { timeout: 5000, encoding: "utf-8" });
+        output = output.split("\n").map((line) => {
+          const match = line.match(/"([^"]+)"/);
+          return match?.[1] ?? "";
+        }).filter(Boolean).join("\n");
+      } else if (platform === "darwin") {
+        output = execFileSync("ps", ["-axco", "comm"], { timeout: 5000, encoding: "utf-8" });
+      } else {
+        output = execFileSync("ps", ["-eo", "comm", "--sort=-comm"], { timeout: 5000, encoding: "utf-8" });
+      }
+      let apps = output.split("\n").filter((l) => l.trim() && !l.startsWith("-") && !l.startsWith("COMMAND"));
       if (p.filter) {
         const filterLower = p.filter.toLowerCase();
         apps = apps.filter((a) => a.toLowerCase().includes(filterLower));

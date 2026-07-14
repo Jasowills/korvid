@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -25,9 +25,10 @@ export function createCameraClient(opts?: { visionModel?: string }): CameraClien
   const frames = new Map<string, string[]>();
   let available = false;
 
-  // Check if imagesnap is available
+  // Check if camera tools are available
   try {
-    execFileSync("which", ["imagesnap"], { stdio: "pipe" });
+    const cmd = process.platform === "win32" ? "where" : "which";
+    execFileSync(cmd, ["imagesnap"], { stdio: "pipe" });
     available = true;
   } catch {
     // imagesnap not installed
@@ -36,11 +37,23 @@ export function createCameraClient(opts?: { visionModel?: string }): CameraClien
   async function captureOnce(): Promise<string> {
     const path = join(cameraDir, `frame-${Date.now()}.png`);
 
-    if (available) {
+    const platform = process.platform;
+    if (available && platform === "darwin") {
       execFileSync("imagesnap", ["-q", path], { timeout: 10000, stdio: "pipe" });
-    } else {
-      // Fallback to screencapture
+    } else if (platform === "darwin") {
+      // macOS fallback to screencapture
       execFileSync("screencapture", ["-x", path], { timeout: 10000, stdio: "pipe" });
+    } else if (platform === "win32") {
+      // Windows: use PowerShell screen capture
+      const psScript = `Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $bmp = New-Object System.Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height); $gfx = [System.Drawing.Graphics]::FromImage($bmp); $gfx.CopyFromScreen(0, 0, 0, 0, $bmp.Size); $bmp.Save('${path.replace(/\\/g, "\\\\")}'); $gfx.Dispose(); $bmp.Dispose()`;
+      execFileSync("powershell", ["-NoProfile", "-Command", psScript], { timeout: 15000, stdio: "pipe" });
+    } else {
+      // Linux: try gnome-screenshot, then scrot
+      try {
+        execFileSync("gnome-screenshot", ["-f", path], { timeout: 10000, stdio: "pipe" });
+      } catch {
+        execFileSync("scrot", [path], { timeout: 10000, stdio: "pipe" });
+      }
     }
 
     return path;
@@ -64,7 +77,7 @@ export function createCameraClient(opts?: { visionModel?: string }): CameraClien
           if (cameraFrames.length > 10) {
             const old = cameraFrames.shift();
             if (old) {
-              try { require("node:fs").unlinkSync(old); } catch {}
+              try { unlinkSync(old); } catch {}
             }
           }
         } catch (err) {
@@ -101,7 +114,7 @@ export function createCameraClient(opts?: { visionModel?: string }): CameraClien
         }
         for (const [id, f] of frames) {
           for (const path of f) {
-            try { require("node:fs").unlinkSync(path); } catch {}
+            try { unlinkSync(path); } catch {}
           }
           frames.delete(id);
         }

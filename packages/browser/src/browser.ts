@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import type { BrowserContext, BrowserTool, BrowserToolResult } from "./types.js";
 
 let idCounter = 0;
@@ -24,7 +25,7 @@ function sanitizePath(path: string): string {
 }
 
 export function createBrowserClient(opts?: { screenshotDir?: string; timeout?: number }): BrowserContext {
-  const screenshotDir = opts?.screenshotDir ?? "/tmp/korvid-browser";
+  const screenshotDir = opts?.screenshotDir ?? join(tmpdir(), "korvid-browser");
   const timeout = opts?.timeout ?? 30000;
 
   if (!existsSync(screenshotDir)) {

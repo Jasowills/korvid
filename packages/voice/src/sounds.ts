@@ -1,4 +1,4 @@
-import { spawn, execSync } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { writeFileSync, unlinkSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -100,7 +100,7 @@ export class SoundLibrary {
       const inputs = [
         `-f lavfi -i "sine=frequency=${config.freq}:duration=${config.duration}"`,
         ...harmonics.map((h) => `-f lavfi -i "sine=frequency=${h}:duration=${config.duration}"`),
-      ].join(" ");
+      ];
 
       const filterParts = [
         `[0:a]afade=t=in:st=0:d=0.005,afade=t=out:st=${Math.max(config.duration - 0.02, 0.01)}:d=0.02,volume=0.7[a0]`,
@@ -113,16 +113,21 @@ export class SoundLibrary {
 
       const filter = `${filterParts.join(";")};${filterParts.map((_, i) => `[a${i}]`).join("")}amix=inputs=${filterParts.length}:duration=longest:normalize=0[out]`;
 
-      execSync(
-        `ffmpeg -y ${inputs} -filter_complex "${filter}" -map "[out]" "${outputPath}" 2>/dev/null`,
-        { stdio: "pipe" }
+      const inputArgs = inputs.flatMap((s) => s.split(" "));
+      execFileSync(
+        "ffmpeg",
+        ["-y", ...inputArgs, "-filter_complex", filter, "-map", "[out]", outputPath],
+        { stdio: "pipe", shell: true }
       );
     } catch {
       // Fallback: single pure tone
       try {
-        execSync(
-          `ffmpeg -y -f lavfi -i "sine=frequency=${config.freq}:duration=${config.duration}" -af "afade=t=in:st=0:d=0.005,afade=t=out:st=${Math.max(config.duration - 0.02, 0.01)}:d=0.02" "${outputPath}" 2>/dev/null`,
-          { stdio: "pipe" }
+        execFileSync(
+          "ffmpeg",
+          ["-y", "-f", "lavfi", "-i", `sine=frequency=${config.freq}:duration=${config.duration}`,
+           "-af", `afade=t=in:st=0:d=0.005,afade=t=out:st=${Math.max(config.duration - 0.02, 0.01)}:d=0.02`,
+           outputPath],
+          { stdio: "pipe", shell: true }
         );
       } catch {
         // Give up silently
@@ -163,16 +168,21 @@ export class SoundLibrary {
       const mixInputs = tones.flatMap((_, i) => [`[h${i * 2}]`, `[h${i * 2 + 1}]`]).join("");
       const filter = `${delays.join(";")};${mixInputs}amix=inputs=${idx}:duration=longest:normalize=0[out]`;
 
-      execSync(
-        `ffmpeg -y ${inputs.join(" ")} -filter_complex "${filter}" -map "[out]" "${outputPath}" 2>/dev/null`,
-        { stdio: "pipe" }
+      execFileSync(
+        "ffmpeg",
+        ["-y", ...inputs.flatMap((s) => s.split(" ")), "-filter_complex", filter, "-map", "[out]", outputPath],
+        { stdio: "pipe", shell: true }
       );
     } catch {
       // Fallback: single shimmering tone
       try {
-        execSync(
-          `ffmpeg -y -f lavfi -i "sine=frequency=880:duration=0.25" -f lavfi -i "sine=frequency=1320:duration=0.25" -filter_complex "[0:a]volume=0.7[a];[1:a]volume=0.3[b];[a][b]amix=inputs=2:duration=longest,afade=t=in:st=0:d=0.005,afade=t=out:st=0.22:d=0.03" "${outputPath}" 2>/dev/null`,
-          { stdio: "pipe" }
+        execFileSync(
+          "ffmpeg",
+          ["-y", "-f", "lavfi", "-i", "sine=frequency=880:duration=0.25",
+           "-f", "lavfi", "-i", "sine=frequency=1320:duration=0.25",
+           "-filter_complex", "[0:a]volume=0.7[a];[1:a]volume=0.3[b];[a][b]amix=inputs=2:duration=longest,afade=t=in:st=0:d=0.005,afade=t=out:st=0.22:d=0.03",
+           outputPath],
+          { stdio: "pipe", shell: true }
         );
       } catch {
         // Give up

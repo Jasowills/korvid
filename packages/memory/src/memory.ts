@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import type { MemoryStore, CoreMemoryEntry, EpisodicMemoryEntry, MemoryNode, MemoryEdge, MemoryGraph } from "./types.js";
 
 let idCounter = 0;
@@ -16,7 +17,7 @@ function cosineSimilarity(a: string, b: string): number {
 }
 
 export function createMemoryStore(opts?: { dataDir?: string }): MemoryStore {
-  const dataDir = opts?.dataDir ?? join(process.env.HOME ?? "/tmp", ".korvid", "memory");
+  const dataDir = opts?.dataDir ?? join(homedir(), ".korvid", "memory");
   const corePath = join(dataDir, "core.json");
   const episodicDir = join(dataDir, "episodic");
   const edgesPath = join(dataDir, "edges.json");
