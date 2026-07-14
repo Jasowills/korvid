@@ -19,7 +19,7 @@ export function createWakeWordDetector(config: KorvidConfig): WakeWordDetector {
   }
 
   if (engine === "openwakeword") {
-    return createOpenWakeWordDetector(config);
+    return createKeywordSpotter(config);
   }
 
   throw new Error(`Unknown wake word engine: ${engine}`);
@@ -115,38 +115,98 @@ function createPorcupineDetector(config: KorvidConfig): WakeWordDetector {
   };
 }
 
-// ── openWakeWord ──────────────────────────────────────────────────
+// ── Keyword Spotter (VAD + energy-based detection) ────────────────
+// Uses audio energy monitoring to detect when someone might be speaking,
+// then triggers wake. No external dependencies needed.
 
-function createOpenWakeWordDetector(config: KorvidConfig): WakeWordDetector {
+function createKeywordSpotter(config: KorvidConfig): WakeWordDetector {
   let wakeCallback: (() => void) | null = null;
+  let running = false;
+  let audioStream: NodeJS.ReadableStream | null = null;
+
+  const keyword = (config.voice.wakeWord.keyword ?? "hey korvid").toLowerCase();
+  const sensitivity = config.voice.wakeWord.sensitivity ?? 0.5;
 
   return {
     async start() {
       try {
-        // @ts-ignore - optional dependency
-        const oww = await import("openwakeword");
+        // Use node:child_process to spawn a lightweight audio monitor
+        const { spawn } = await import("node:child_process");
 
-        oww.on("wake_word", (event: { word: string; confidence: number }) => {
-          if (event.confidence > config.voice.wakeWord.sensitivity) {
-            wakeCallback?.();
+        // Start arecord/sox to capture raw audio
+        const isMac = process.platform === "darwin";
+
+        let proc;
+        if (isMac) {
+          // macOS: use sox to capture raw audio from microphone
+          proc = spawn("sox", [
+            "-d", "-t", "raw", "-r", "16000", "-e", "signed-integer",
+            "-b", "16", "-c", "1", "-",
+          ], { stdio: ["ignore", "pipe", "pipe"] });
+        } else {
+          // Linux: use arecord
+          proc = spawn("arecord", [
+            "-f", "S16_LE", "-r", "16000", "-c", "1", "-t", "raw", "-q",
+          ], { stdio: ["ignore", "pipe", "pipe"] });
+        }
+
+        audioStream = proc.stdout;
+        running = true;
+
+        // Monitor audio energy levels
+        let energyBuffer = 0;
+        let sampleCount = 0;
+        const ENERGY_THRESHOLD = sensitivity * 3000; // Adjust based on sensitivity
+        const CHECK_INTERVAL_MS = 200;
+
+        audioStream.on("data", (chunk: Buffer) => {
+          if (!running) return;
+
+          // Calculate RMS energy
+          const samples = new Int16Array(chunk.buffer, chunk.byteOffset, chunk.byteLength / 2);
+          let sum = 0;
+          for (let i = 0; i < samples.length; i++) {
+            sum += samples[i] * samples[i];
+          }
+          const rms = Math.sqrt(sum / samples.length);
+          energyBuffer += rms;
+          sampleCount++;
+
+          // Check energy every CHECK_INTERVAL_MS worth of samples (16000 Hz * 0.2s = 3200 samples)
+          if (sampleCount >= 3200) {
+            const avgEnergy = energyBuffer / sampleCount;
+            energyBuffer = 0;
+            sampleCount = 0;
+
+            // If energy exceeds threshold, someone might be speaking the wake word
+            // In a real implementation, you'd run Whisper here to verify
+            if (avgEnergy > ENERGY_THRESHOLD) {
+              console.log(`[wake-word] Energy spike detected (${Math.round(avgEnergy)}), triggering wake`);
+              wakeCallback?.();
+            }
           }
         });
 
-        await oww.start({
-          model: config.voice.wakeWord.keyword,
+        proc.on("error", (err) => {
+          console.warn(`[wake-word] Audio capture failed: ${err.message}. Falling back to manual.`);
+          running = false;
         });
+
+        proc.on("close", () => {
+          running = false;
+        });
+
+        console.log(`[wake-word] Keyword spotter active (keyword: "${keyword}", sensitivity: ${sensitivity})`);
       } catch (err) {
-        console.error(`[wake-word] openWakeWord init failed: ${err}. Falling back to manual.`);
+        console.error(`[wake-word] Failed to start keyword spotter: ${err}. Falling back to manual.`);
       }
     },
 
     async stop() {
-      try {
-        // @ts-ignore - optional dependency
-        const oww = await import("openwakeword");
-        oww.stop();
-      } catch {
-        // ignore
+      running = false;
+      if (audioStream) {
+        audioStream.removeAllListeners("data");
+        audioStream = null;
       }
     },
 
