@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { BRAND } from "../lib/brand.js";
-
-interface IntegrationsPanelProps {}
+import { BRAND, rgba } from "../lib/brand.js";
 
 interface IntegrationStatus {
   calendar: { enabled: boolean; provider: string };
   email: { enabled: boolean; provider: string };
 }
 
-export function IntegrationsPanel(_props: IntegrationsPanelProps) {
+export function IntegrationsPanel() {
   const [status, setStatus] = useState<IntegrationStatus | null>(null);
 
   useEffect(() => {
@@ -27,17 +25,22 @@ export function IntegrationsPanel(_props: IntegrationsPanelProps) {
 
   return (
     <div style={{
-      background: "rgba(13,15,18,0.3)",
-      borderTop: `1px solid ${BRAND.color.border}`,
-      padding: "12px 16px",
+      background: rgba(BRAND.color.surface, 0.5),
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: `1px solid ${BRAND.color["glass-border"]}`,
+      borderRadius: 10,
+      margin: "0 10px 8px 10px",
+      padding: "12px 14px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
-        fontSize: 11,
-        color: BRAND.color.border,
-        letterSpacing: "0.05em",
+        fontSize: 10,
+        fontWeight: 500,
+        color: BRAND.color["text-muted"],
+        letterSpacing: "0.1em",
         textTransform: "uppercase",
-        marginBottom: 10,
+        marginBottom: 8,
       }}>
         integrations
       </div>
@@ -56,14 +59,15 @@ function IntegrationRow({ name, provider, enabled }: { name: string; provider: s
       alignItems: "center",
       padding: "4px 0",
     }}>
-      <span style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.white }}>{name}</span>
+      <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.white, opacity: 0.8 }}>{name}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border }}>{provider}</span>
-        <span style={{
+        <span style={{ fontFamily: BRAND.font.mono, fontSize: 9, color: BRAND.color["text-muted"] }}>{provider}</span>
+        <div style={{
           width: 6,
           height: 6,
           borderRadius: "50%",
-          background: enabled ? "#48BB78" : BRAND.color.border,
+          background: enabled ? "#4ADE80" : BRAND.color["text-muted"],
+          boxShadow: enabled ? "0 0 6px rgba(74,222,128,0.4)" : "none",
         }} />
       </div>
     </div>

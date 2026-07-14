@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { BRAND } from "../lib/brand.js";
-
-interface VoicePersonalityPanelProps {}
+import { BRAND, rgba } from "../lib/brand.js";
 
 interface PersonalityStatus {
   activeProfile: string;
@@ -15,7 +13,7 @@ const PROFILE_DESCRIPTIONS: Record<string, string> = {
   butler: "formal, measured",
 };
 
-export function VoicePersonalityPanel(_props: VoicePersonalityPanelProps) {
+export function VoicePersonalityPanel() {
   const [status, setStatus] = useState<PersonalityStatus | null>(null);
 
   useEffect(() => {
@@ -32,59 +30,49 @@ export function VoicePersonalityPanel(_props: VoicePersonalityPanelProps) {
 
   return (
     <div style={{
-      background: "rgba(13,15,18,0.3)",
-      borderTop: `1px solid ${BRAND.color.border}`,
-      padding: "12px 16px",
+      background: rgba(BRAND.color.surface, 0.5),
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: `1px solid ${BRAND.color["glass-border"]}`,
+      borderRadius: 10,
+      margin: "0 10px 8px 10px",
+      padding: "12px 14px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
-        fontSize: 11,
-        color: BRAND.color.border,
-        letterSpacing: "0.05em",
+        fontSize: 10,
+        fontWeight: 500,
+        color: BRAND.color["text-muted"],
+        letterSpacing: "0.1em",
         textTransform: "uppercase",
-        marginBottom: 10,
+        marginBottom: 8,
       }}>
-        voice personality
+        voice
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 12, color: BRAND.color.white }}>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.white, fontWeight: 500 }}>
             {status.activeProfile}
           </div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, marginTop: 2 }}>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 9, color: BRAND.color["text-muted"], marginTop: 2 }}>
             {PROFILE_DESCRIPTIONS[status.activeProfile] ?? "custom"}
           </div>
         </div>
         <span style={{
           fontFamily: BRAND.font.mono,
-          fontSize: 9,
+          fontSize: 8,
           color: BRAND.color.sheen,
-          letterSpacing: "0.05em",
+          letterSpacing: "0.08em",
           textTransform: "uppercase",
           padding: "2px 6px",
-          borderRadius: 2,
-          background: BRAND.color.bg,
+          borderRadius: 3,
+          background: rgba(BRAND.color.sheen, 0.1),
+          border: `1px solid ${rgba(BRAND.color.sheen, 0.2)}`,
         }}>
           active
         </span>
       </div>
-
-      {status.customProfiles.length > 0 && (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, marginBottom: 4 }}>custom profiles</div>
-          {status.customProfiles.map((p) => (
-            <div key={p.name} style={{
-              fontFamily: BRAND.font.mono,
-              fontSize: 11,
-              color: BRAND.color.white,
-              padding: "2px 0",
-            }}>
-              {p.name} · <span style={{ color: BRAND.color.border }}>{p.personality}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

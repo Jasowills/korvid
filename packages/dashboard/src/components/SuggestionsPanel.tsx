@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BRAND } from "../lib/brand.js";
+import { BRAND, rgba } from "../lib/brand.js";
 import type { Suggestion } from "../lib/types.js";
 
 interface SuggestionsPanelProps {
@@ -42,58 +42,54 @@ export function SuggestionsPanel({ suggestions: propSuggestions }: SuggestionsPa
 
   return (
     <div style={{
-      background: "rgba(13,15,18,0.3)",
-      borderTop: `1px solid ${BRAND.color.border}`,
-      padding: "12px 16px",
+      background: rgba(BRAND.color.surface, 0.5),
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: `1px solid ${BRAND.color["glass-border"]}`,
+      borderRadius: 10,
+      margin: "0 10px 8px 10px",
+      padding: "12px 14px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
-        fontSize: 11,
-        color: BRAND.color.border,
-        letterSpacing: "0.05em",
+        fontSize: 10,
+        fontWeight: 500,
+        color: BRAND.color["text-muted"],
+        letterSpacing: "0.1em",
         textTransform: "uppercase",
-        marginBottom: 10,
+        marginBottom: 8,
       }}>
         suggestions
       </div>
 
-      {suggestions.map((s) => (
+      {suggestions.slice(0, 3).map((s) => (
         <div key={s.id} style={{
           padding: "6px 0",
-          borderBottom: `1px solid ${BRAND.color.bg}`,
+          borderBottom: `1px solid ${rgba(BRAND.color.border, 0.2)}`,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
             <span style={{
               fontFamily: BRAND.font.mono,
-              fontSize: 9,
-              color: TYPE_COLORS[s.type] ?? BRAND.color.border,
+              fontSize: 8,
+              color: TYPE_COLORS[s.type] ?? BRAND.color["text-muted"],
               letterSpacing: "0.05em",
               textTransform: "uppercase",
-              padding: "1px 4px",
-              borderRadius: 2,
-              background: BRAND.color.bg,
+              padding: "1px 5px",
+              borderRadius: 3,
+              background: rgba(TYPE_COLORS[s.type] ?? BRAND.color["text-muted"], 0.1),
             }}>
               {s.type}
             </span>
           </div>
           <div style={{
             fontFamily: BRAND.font.body,
-            fontSize: 12,
+            fontSize: 11,
             color: BRAND.color.white,
+            opacity: 0.85,
             lineHeight: 1.4,
           }}>
             {s.message}
           </div>
-          {s.context && (
-            <div style={{
-              fontFamily: BRAND.font.mono,
-              fontSize: 10,
-              color: BRAND.color.border,
-              marginTop: 2,
-            }}>
-              {s.context}
-            </div>
-          )}
         </div>
       ))}
     </div>

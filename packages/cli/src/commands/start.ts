@@ -113,12 +113,54 @@ export const startCommand = new Command("start")
           const reasoning = createReasoningClient(config);
           const sounds = new SoundLibrary();
 
+          // Create clap detector if enabled
+          let clapDetector: any = undefined;
+          if (config.voice.clapActivation?.enabled) {
+            const { createClapDetector } = await import("@korvid/voice");
+            clapDetector = createClapDetector({
+              clapWindowMs: config.voice.clapActivation.clapWindowMs ?? 700,
+              sensitivity: config.voice.clapActivation.sensitivity ?? 0.5,
+            });
+            log.info("clap detector created", {
+              sensitivity: config.voice.clapActivation.sensitivity ?? 0.5,
+            });
+
+            // Start continuous audio feed to clap detector
+            const { spawn } = await import("node:child_process");
+            const isMac = process.platform === "darwin";
+            let micProcess: ReturnType<typeof spawn>;
+
+            if (isMac) {
+              micProcess = spawn("sox", [
+                "-d", "-t", "raw", "-r", "16000", "-e", "signed-integer",
+                "-b", "16", "-c", "1", "-",
+              ], { stdio: ["ignore", "pipe", "pipe"] });
+            } else {
+              micProcess = spawn("arecord", [
+                "-f", "S16_LE", "-r", "16000", "-c", "1", "-t", "raw", "-q",
+              ], { stdio: ["ignore", "pipe", "pipe"] });
+            }
+
+            if (micProcess.stdout) {
+              micProcess.stdout.on("data", (chunk: Buffer) => {
+                clapDetector.processAudio(chunk);
+              });
+            }
+
+            micProcess.on("error", (err) => {
+              log.warn("mic capture failed for clap detector", { error: err.message });
+            });
+
+            log.info("clap detector listening on microphone");
+          }
+
           voicePipeline = createVoicePipeline({
             wakeWord,
             stt,
             reasoning,
             tts,
             sounds: { play: (name: string) => sounds.play(name as any) },
+            clapDetector,
             config: {
               sessionPersist: config.voice.sessionPersist,
               sessionPath: config.voice.sessionPath,

@@ -1,4 +1,4 @@
-import { BRAND, STATUS_ICON, STATUS_COLOR } from "../lib/brand.js";
+import { BRAND, rgba, STATUS_ICON, STATUS_COLOR } from "../lib/brand.js";
 import type { ActivityEntry } from "../lib/types.js";
 
 interface ActivityPanelProps {
@@ -21,16 +21,17 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
 
   return (
     <div style={{
-      flex: 1,
-      display: "flex",
-      flexDirection: "column",
+      background: rgba(BRAND.color.surface, 0.5),
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: `1px solid ${BRAND.color["glass-border"]}`,
+      borderRadius: 10,
+      margin: "0 10px 8px 10px",
       overflow: "hidden",
-      background: "rgba(13,15,18,0.3)",
-      borderLeft: "none",
     }}>
       {/* Header */}
       <div style={{
-        padding: "12px 16px",
+        padding: "10px 14px",
         borderBottom: `1px solid ${BRAND.color.border}`,
         display: "flex",
         justifyContent: "space-between",
@@ -38,9 +39,10 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
       }}>
         <span style={{
           fontFamily: BRAND.font.mono,
-          fontSize: 11,
-          color: BRAND.color.border,
-          letterSpacing: "0.05em",
+          fontSize: 10,
+          fontWeight: 500,
+          color: BRAND.color["text-muted"],
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
         }}>
           activity
@@ -48,54 +50,56 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
         {isActive && onInterrupt && (
           <button
             onClick={onInterrupt}
-            aria-label="Interrupt current action"
+            aria-label="Interrupt"
             style={{
-              background: BRAND.color.ember,
-              color: "#fff",
-              border: "none",
-              borderRadius: 4,
-              padding: "4px 10px",
+              background: rgba(BRAND.color.ember, 0.15),
+              color: BRAND.color.ember,
+              border: `1px solid ${rgba(BRAND.color.ember, 0.3)}`,
+              borderRadius: 5,
+              padding: "3px 10px",
               fontFamily: BRAND.font.mono,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 600,
               cursor: "pointer",
-              letterSpacing: "0.03em",
+              letterSpacing: "0.05em",
+              transition: "all 0.15s ease",
             }}
           >
-            INTERRUPT
+            STOP
           </button>
         )}
       </div>
 
-      {/* Activity feed */}
-      <div style={{ flex: 1, overflow: "auto", padding: "8px 0" }}>
+      {/* Feed */}
+      <div style={{ maxHeight: 180, overflowY: "auto", overflowX: "hidden" }}>
         {activityLog.length === 0 && (
           <div style={{
-            padding: "24px 16px",
+            padding: "20px 14px",
             fontFamily: BRAND.font.mono,
-            fontSize: 12,
-            color: BRAND.color.border,
+            fontSize: 11,
+            color: BRAND.color["text-muted"],
             textAlign: "center",
+            opacity: 0.5,
           }}>
-            no activity
+            idle
           </div>
         )}
-        {activityLog.map((entry) => (
+        {activityLog.slice(0, 20).map((entry) => (
           <div
             key={entry.id}
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: 8,
-              padding: "6px 16px",
-              borderBottom: `1px solid ${rgba(BRAND.color.border, 0.3)}`,
-              animation: "fadeIn 0.2s ease-out",
+              padding: "5px 14px",
+              borderBottom: `1px solid ${rgba(BRAND.color.border, 0.2)}`,
+              animation: "fadeIn 0.15s ease-out",
             }}
           >
             <span style={{
               fontFamily: BRAND.font.mono,
-              fontSize: 12,
-              color: TYPE_ICONS[entry.type] === "✕" ? BRAND.color.ember : BRAND.color.border,
+              fontSize: 11,
+              color: entry.type === "error" ? BRAND.color.ember : BRAND.color["text-muted"],
               flexShrink: 0,
               marginTop: 1,
             }}>
@@ -104,18 +108,19 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontFamily: BRAND.font.mono,
-                fontSize: 12,
+                fontSize: 11,
                 color: BRAND.color.white,
                 lineHeight: 1.4,
                 wordBreak: "break-word",
+                opacity: 0.9,
               }}>
-                {entry.message.slice(0, 200)}
+                {entry.message.slice(0, 160)}
               </div>
               <div style={{
                 fontFamily: BRAND.font.mono,
-                fontSize: 10,
-                color: BRAND.color.border,
-                marginTop: 2,
+                fontSize: 9,
+                color: BRAND.color["text-muted"],
+                marginTop: 1,
               }}>
                 {new Date(entry.timestamp).toLocaleTimeString()}
               </div>
@@ -123,8 +128,8 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
             {entry.status && (
               <span style={{
                 fontFamily: BRAND.font.mono,
-                fontSize: 10,
-                color: STATUS_COLOR[entry.status as keyof typeof STATUS_COLOR] ?? BRAND.color.border,
+                fontSize: 9,
+                color: STATUS_COLOR[entry.status as keyof typeof STATUS_COLOR] ?? BRAND.color["text-muted"],
                 flexShrink: 0,
                 marginTop: 2,
               }}>
@@ -136,11 +141,4 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
       </div>
     </div>
   );
-}
-
-function rgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
 }

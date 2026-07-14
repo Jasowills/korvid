@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { BRAND } from "../lib/brand.js";
-
-interface TriggerManagerPanelProps {}
+import { BRAND, rgba } from "../lib/brand.js";
 
 interface TriggerStatus {
   enabled: boolean;
@@ -9,7 +7,7 @@ interface TriggerStatus {
   verifySignatures: boolean;
 }
 
-export function TriggerManagerPanel(_props: TriggerManagerPanelProps) {
+export function TriggerManagerPanel() {
   const [status, setStatus] = useState<TriggerStatus | null>(null);
 
   useEffect(() => {
@@ -29,35 +27,41 @@ export function TriggerManagerPanel(_props: TriggerManagerPanelProps) {
 
   return (
     <div style={{
-      background: "rgba(13,15,18,0.3)",
-      borderTop: `1px solid ${BRAND.color.border}`,
-      padding: "12px 16px",
+      background: rgba(BRAND.color.surface, 0.5),
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: `1px solid ${BRAND.color["glass-border"]}`,
+      borderRadius: 10,
+      margin: "0 10px 8px 10px",
+      padding: "12px 14px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
-        fontSize: 11,
-        color: BRAND.color.border,
-        letterSpacing: "0.05em",
+        fontSize: 10,
+        fontWeight: 500,
+        color: BRAND.color["text-muted"],
+        letterSpacing: "0.1em",
         textTransform: "uppercase",
-        marginBottom: 10,
+        marginBottom: 8,
       }}>
         triggers
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.white }}>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.white, opacity: 0.8 }}>
             {status.enabled ? `port ${status.port}` : "disabled"}
           </div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, marginTop: 2 }}>
-            hmac verification: {status.verifySignatures ? "on" : "off"}
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 9, color: BRAND.color["text-muted"], marginTop: 2 }}>
+            hmac: {status.verifySignatures ? "on" : "off"}
           </div>
         </div>
-        <span style={{
-          width: 8,
-          height: 8,
+        <div style={{
+          width: 6,
+          height: 6,
           borderRadius: "50%",
-          background: status.enabled ? "#48BB78" : BRAND.color.border,
+          background: status.enabled ? "#4ADE80" : BRAND.color["text-muted"],
+          boxShadow: status.enabled ? "0 0 6px rgba(74,222,128,0.4)" : "none",
         }} />
       </div>
     </div>

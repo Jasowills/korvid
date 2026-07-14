@@ -1,28 +1,13 @@
-import { BRAND } from "../lib/brand.js";
+import { BRAND, rgba } from "../lib/brand.js";
 import type { DelegationEvent } from "../lib/types.js";
 
 interface DelegationTimelineProps {
   events: DelegationEvent[];
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  delegation_started: "▶",
-  agent_selected: "◆",
-  spec_generated: "◇",
-  sandbox_created: "□",
-  agent_running: "◐",
-  validation_started: "○",
-  validation_passed: "●",
-  validation_failed: "✕",
-  retry: "↻",
-  escalated: "!",
-  completed: "●",
-  error: "✕",
-};
-
-const STATUS_BORDER: Record<string, string> = {
+const STATUS_COLOR: Record<string, string> = {
   running: BRAND.color.sheen,
-  completed: "#48BB78",
+  completed: "#4ADE80",
   failed: BRAND.color.ember,
 };
 
@@ -31,72 +16,59 @@ export function DelegationTimeline({ events }: DelegationTimelineProps) {
 
   return (
     <div style={{
-      maxHeight: 140,
+      maxHeight: 120,
       overflow: "auto",
-      background: "rgba(13,15,18,0.3)",
+      background: rgba(BRAND.color.surface, 0.4),
       borderTop: `1px solid ${BRAND.color.border}`,
-      padding: "10px 16px",
+      padding: "8px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
-        fontSize: 11,
-        color: BRAND.color.border,
-        letterSpacing: "0.05em",
+        fontSize: 9,
+        fontWeight: 500,
+        color: BRAND.color["text-muted"],
+        letterSpacing: "0.1em",
         textTransform: "uppercase",
-        marginBottom: 8,
+        marginBottom: 6,
       }}>
         delegation
       </div>
 
-      <div style={{ display: "flex", gap: 2, overflowX: "auto", paddingBottom: 4 }}>
-        {events.map((event) => (
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+        {events.slice(0, 8).map((event) => (
           <div
             key={event.id}
             style={{
-              minWidth: 100,
+              minWidth: 110,
               maxWidth: 160,
-              padding: "6px 8px",
-              background: BRAND.color.bg,
-              borderRadius: 4,
-              borderLeft: `2px solid ${STATUS_BORDER[event.status] ?? BRAND.color.border}`,
+              padding: "5px 8px",
+              background: rgba(BRAND.color.bg, 0.6),
+              borderRadius: 6,
+              border: `1px solid ${rgba(BRAND.color.border, 0.3)}`,
+              borderLeft: `2px solid ${STATUS_COLOR[event.status] ?? BRAND.color.border}`,
               flexShrink: 0,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
-              <span style={{
-                fontFamily: BRAND.font.mono,
-                fontSize: 10,
-                color: STATUS_BORDER[event.status] ?? BRAND.color.border,
-              }}>
-                {TYPE_ICONS[event.type] ?? "·"}
-              </span>
-              <span style={{
-                fontFamily: BRAND.font.mono,
-                fontSize: 9,
-                color: BRAND.color.border,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-              }}>
-                {event.type.replace(/_/g, " ")}
-              </span>
+            <div style={{
+              fontFamily: BRAND.font.mono,
+              fontSize: 8,
+              color: STATUS_COLOR[event.status] ?? BRAND.color["text-muted"],
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              marginBottom: 2,
+            }}>
+              {event.type.replace(/_/g, " ")}
             </div>
             <div style={{
               fontFamily: BRAND.font.mono,
-              fontSize: 10,
+              fontSize: 9,
               color: BRAND.color.white,
+              opacity: 0.7,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}>
               {event.request?.slice(0, 40) ?? ""}
-            </div>
-            <div style={{
-              fontFamily: BRAND.font.mono,
-              fontSize: 9,
-              color: BRAND.color.border,
-              marginTop: 2,
-            }}>
-              {new Date(event.timestamp).toLocaleTimeString()}
             </div>
           </div>
         ))}

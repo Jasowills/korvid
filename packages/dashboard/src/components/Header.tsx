@@ -1,4 +1,4 @@
-import { BRAND, STATUS_ICON } from "../lib/brand.js";
+import { BRAND, rgba } from "../lib/brand.js";
 
 interface HeaderProps {
   connectionState: string;
@@ -8,10 +8,8 @@ interface HeaderProps {
 
 export function Header({ connectionState, pipelineState, uptime }: HeaderProps) {
   const uptimeStr = formatUptime(uptime);
-  const pipelineColor = pipelineState === "idle" ? BRAND.color["text-muted"]
-    : pipelineState === "listening" ? BRAND.color.sheen
-    : pipelineState === "processing" ? BRAND.color.sheen
-    : BRAND.color.white;
+  const isOnline = connectionState === "connected";
+  const isIdle = pipelineState === "idle";
 
   return (
     <header style={{
@@ -19,58 +17,99 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "0 20px",
-      height: 48,
-      background: "rgba(13,15,18,0.4)",
-      backdropFilter: "blur(24px) saturate(1.4)",
-      WebkitBackdropFilter: "blur(24px) saturate(1.4)",
-      borderBottom: `1px solid ${BRAND.color["glass-border"]}`,
+      padding: "0 24px",
+      height: 52,
+      background: rgba(BRAND.color.surface, 0.4),
+      backdropFilter: "blur(32px) saturate(1.5)",
+      WebkitBackdropFilter: "blur(32px) saturate(1.5)",
+      borderBottom: `1px solid ${BRAND.color.border}`,
       fontFamily: BRAND.font.mono,
       zIndex: 100,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {/* Orb icon */}
+      {/* Left: Brand */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* Orb indicator */}
         <div style={{
-          width: 8,
-          height: 8,
+          width: 10,
+          height: 10,
           borderRadius: "50%",
-          background: pipelineState !== "idle" ? BRAND.color.sheen : BRAND.color["text-muted"],
-          boxShadow: pipelineState !== "idle" ? `0 0 12px rgba(124,140,255,0.5)` : "none",
-          transition: "all 0.3s ease",
+          background: !isIdle ? BRAND.color.sheen : isOnline ? BRAND.color["text-muted"] : BRAND.color.ember,
+          boxShadow: !isIdle
+            ? `0 0 16px ${rgba(BRAND.color.sheen, 0.6)}, 0 0 4px ${rgba(BRAND.color.sheen, 0.4)}`
+            : isOnline
+              ? `0 0 8px ${rgba(BRAND.color["text-muted"], 0.3)}`
+              : `0 0 8px ${rgba(BRAND.color.ember, 0.4)}`,
+          transition: "all 0.4s ease",
         }} />
         <span style={{
-          fontSize: 14,
-          fontWeight: 600,
-          letterSpacing: "-0.02em",
+          fontSize: 15,
+          fontWeight: 700,
+          letterSpacing: "-0.03em",
           color: BRAND.color.white,
+          fontFamily: BRAND.font.display,
         }}>
           korvid
         </span>
+        <span style={{
+          fontSize: 10,
+          fontWeight: 500,
+          color: BRAND.color["text-muted"],
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          marginLeft: 2,
+        }}>
+          v0.1
+        </span>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+      {/* Right: Status */}
+      <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        {/* Connection */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: isOnline ? "#4ADE80" : BRAND.color.ember,
+            boxShadow: isOnline ? "0 0 8px rgba(74,222,128,0.4)" : `0 0 8px ${rgba(BRAND.color.ember, 0.4)}`,
+          }} />
           <span style={{
-            color: connectionState === "connected" ? BRAND.color.sheen : BRAND.color.ember,
-            fontSize: 8,
+            fontSize: 11,
+            color: BRAND.color["text-secondary"],
           }}>
-            {STATUS_ICON[connectionState === "connected" ? "active" : "error"]}
-          </span>
-          <span style={{ color: BRAND.color["text-muted"], fontFamily: BRAND.font.mono, fontSize: 11 }}>
-            {connectionState}
+            {isOnline ? "online" : "offline"}
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ color: pipelineColor, fontSize: 8 }}>
-            {pipelineState === "processing" ? STATUS_ICON.processing : STATUS_ICON.idle}
+        {/* Divider */}
+        <div style={{ width: 1, height: 16, background: BRAND.color.border }} />
+
+        {/* Pipeline state */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{
+            color: !isIdle ? BRAND.color.sheen : BRAND.color["text-muted"],
+            fontSize: 10,
+          }}>
+            {!isIdle ? "◐" : "○"}
           </span>
-          <span style={{ color: BRAND.color.white, fontFamily: BRAND.font.mono, fontSize: 11 }}>
+          <span style={{
+            fontSize: 11,
+            color: !isIdle ? BRAND.color.sheen : BRAND.color["text-secondary"],
+            fontWeight: !isIdle ? 500 : 400,
+          }}>
             {pipelineState}
           </span>
         </div>
 
-        <span style={{ color: BRAND.color["text-muted"], fontFamily: BRAND.font.mono, fontSize: 11 }}>
+        {/* Divider */}
+        <div style={{ width: 1, height: 16, background: BRAND.color.border }} />
+
+        {/* Uptime */}
+        <span style={{
+          fontSize: 11,
+          color: BRAND.color["text-muted"],
+          fontVariantNumeric: "tabular-nums",
+        }}>
           {uptimeStr}
         </span>
       </div>

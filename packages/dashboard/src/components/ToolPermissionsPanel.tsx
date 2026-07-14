@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BRAND } from "../lib/brand.js";
+import { BRAND, rgba } from "../lib/brand.js";
 import type { ToolPermissions } from "../lib/types.js";
 
 interface ToolPermissionsPanelProps {
@@ -10,7 +10,7 @@ interface ToolPermissionsPanelProps {
 const TOOLS = [
   "screenshot", "open_app", "close_app", "list_apps",
   "clipboard_read", "clipboard_write", "list_files",
-  "read_file", "write_file", "run_command",
+  "read_file", "write_file", "run_command", "visualize",
 ];
 
 export function ToolPermissionsPanel({ permissions, onUpdate }: ToolPermissionsPanelProps) {
@@ -32,9 +32,13 @@ export function ToolPermissionsPanel({ permissions, onUpdate }: ToolPermissionsP
 
   return (
     <div style={{
-      background: "rgba(13,15,18,0.3)",
-      borderTop: `1px solid ${BRAND.color.border}`,
-      padding: "12px 16px",
+      background: rgba(BRAND.color.surface, 0.5),
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: `1px solid ${BRAND.color["glass-border"]}`,
+      borderRadius: 10,
+      margin: "0 10px 8px 10px",
+      padding: "12px 14px",
     }}>
       <div style={{
         display: "flex",
@@ -44,68 +48,66 @@ export function ToolPermissionsPanel({ permissions, onUpdate }: ToolPermissionsP
       }}>
         <span style={{
           fontFamily: BRAND.font.mono,
-          fontSize: 11,
-          color: BRAND.color.border,
-          letterSpacing: "0.05em",
+          fontSize: 10,
+          fontWeight: 500,
+          color: BRAND.color["text-muted"],
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
         }}>
-          tool permissions
+          tools
         </span>
         <button
           onClick={toggleAll}
-          aria-label={localPerms.enabled ? "Disable tool permissions" : "Enable tool permissions"}
+          aria-label={localPerms.enabled ? "Disable" : "Enable"}
           style={{
-            background: localPerms.enabled ? BRAND.color.sheen : BRAND.color.border,
-            color: localPerms.enabled ? "#fff" : BRAND.color.white,
-            border: "none",
-            borderRadius: 4,
+            background: localPerms.enabled ? rgba(BRAND.color.sheen, 0.15) : rgba(BRAND.color["text-muted"], 0.15),
+            color: localPerms.enabled ? BRAND.color.sheen : BRAND.color["text-muted"],
+            border: `1px solid ${localPerms.enabled ? rgba(BRAND.color.sheen, 0.3) : rgba(BRAND.color["text-muted"], 0.3)}`,
+            borderRadius: 5,
             padding: "2px 8px",
             fontFamily: BRAND.font.mono,
-            fontSize: 10,
+            fontSize: 9,
+            fontWeight: 500,
             cursor: "pointer",
+            letterSpacing: "0.05em",
           }}
         >
           {localPerms.enabled ? "ON" : "OFF"}
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "4px 8px", alignItems: "center" }}>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase" }}>tool</span>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase", textAlign: "center" }}>allow</span>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase", textAlign: "center" }}>deny</span>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase", textAlign: "center" }}>confirm</span>
-
+      <div style={{ maxHeight: 140, overflowY: "auto" }}>
         {TOOLS.map((tool) => (
-          <Row
-            key={tool}
-            tool={tool}
-            perms={localPerms}
-            onToggle={(list) => toggle(tool, list)}
-          />
+          <div key={tool} style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "3px 0",
+          }}>
+            <span style={{
+              fontFamily: BRAND.font.mono,
+              fontSize: 10,
+              color: BRAND.color.white,
+              opacity: 0.8,
+            }}>
+              {tool}
+            </span>
+            <div style={{ display: "flex", gap: 6 }}>
+              {(["allow", "deny", "requireConfirmation"] as const).map((list) => (
+                <label key={list} style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={(localPerms[list] ?? []).includes(tool)}
+                    onChange={() => toggle(tool, list)}
+                    aria-label={`${list} ${tool}`}
+                    style={{ accentColor: BRAND.color.sheen, width: 12, height: 12 }}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
-  );
-}
-
-function Row({ tool, perms, onToggle }: { tool: string; perms: ToolPermissions; onToggle: (list: "allow" | "deny" | "requireConfirmation") => void }) {
-  const isChecked = (list: "allow" | "deny" | "requireConfirmation") =>
-    (perms[list] ?? []).includes(tool);
-
-  return (
-    <>
-      <span style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.white }}>{tool}</span>
-      {(["allow", "deny", "requireConfirmation"] as const).map((list) => (
-        <label key={list} style={{ textAlign: "center", cursor: "pointer" }}>
-          <input
-            type="checkbox"
-            checked={isChecked(list)}
-            onChange={() => onToggle(list)}
-            aria-label={`${list} ${tool}`}
-            style={{ accentColor: BRAND.color.sheen }}
-          />
-        </label>
-      ))}
-    </>
   );
 }
