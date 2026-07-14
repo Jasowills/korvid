@@ -13,111 +13,106 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
 
   return (
     <header style={{
-      gridColumn: "1 / -1",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "0 24px",
-      height: 52,
-      background: rgba(BRAND.color.surface, 0.4),
-      backdropFilter: "blur(32px) saturate(1.5)",
-      WebkitBackdropFilter: "blur(32px) saturate(1.5)",
+      padding: "0 20px",
+      height: 44,
+      background: rgba(BRAND.color.surface, 0.3),
+      backdropFilter: "blur(24px)",
       borderBottom: `1px solid ${BRAND.color["glass-border"]}`,
       fontFamily: BRAND.font.mono,
+      fontSize: 11,
       zIndex: 100,
     }}>
       {/* Left: Brand */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {/* Orb indicator */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{
-          width: 10,
-          height: 10,
+          width: 8,
+          height: 8,
           borderRadius: "50%",
-          background: !isIdle ? BRAND.color.sheen : isOnline ? BRAND.color["text-muted"] : BRAND.color.ember,
+          background: !isIdle ? BRAND.color.sheen : isOnline ? "#3A3F44" : BRAND.color.ember,
           boxShadow: !isIdle
-            ? `0 0 16px ${rgba(BRAND.color.sheen, 0.6)}, 0 0 4px ${rgba(BRAND.color.sheen, 0.4)}`
+            ? `0 0 12px ${rgba(BRAND.color.sheen, 0.6)}, 0 0 4px ${rgba(BRAND.color.sheen, 0.3)}`
             : isOnline
-              ? `0 0 8px ${rgba(BRAND.color["text-muted"], 0.3)}`
+              ? `0 0 6px rgba(74,222,128,0.2)`
               : `0 0 8px ${rgba(BRAND.color.ember, 0.4)}`,
-          transition: "all 0.4s ease",
+          transition: "all 0.3s ease",
           animation: !isIdle ? "statusPulse 2s ease-in-out infinite" : "none",
         }} />
         <span style={{
-          fontSize: 15,
+          fontSize: 13,
           fontWeight: 700,
-          letterSpacing: "-0.03em",
+          letterSpacing: "-0.02em",
           color: BRAND.color.white,
           fontFamily: BRAND.font.display,
         }}>
           korvid
         </span>
-        <span style={{
-          fontSize: 10,
-          fontWeight: 500,
-          color: BRAND.color["text-muted"],
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          marginLeft: 2,
-        }}>
-          v0.1
-        </span>
       </div>
 
-      {/* Right: Status */}
-      <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-        {/* Connection */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: isOnline ? "#4ADE80" : BRAND.color.ember,
-            boxShadow: isOnline ? "0 0 8px rgba(74,222,128,0.4)" : `0 0 8px ${rgba(BRAND.color.ember, 0.4)}`,
-            animation: isOnline ? "glowPulse 3s ease-in-out infinite" : "none",
-          }} />
-          <span style={{
-            fontSize: 11,
-            color: BRAND.color["text-secondary"],
-          }}>
-            {isOnline ? "online" : "offline"}
-          </span>
-        </div>
+      {/* Center: Status pills */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <StatusPill
+          label="connection"
+          value={isOnline ? "online" : "offline"}
+          color={isOnline ? "#4ADE80" : BRAND.color.ember}
+          pulse={isOnline}
+        />
+        <StatusPill
+          label="pipeline"
+          value={pipelineState}
+          color={!isIdle ? BRAND.color.sheen : BRAND.color["text-muted"]}
+          pulse={!isIdle}
+        />
+        <StatusPill
+          label="uptime"
+          value={uptimeStr}
+          color={BRAND.color["text-secondary"]}
+          mono
+        />
+      </div>
 
-        {/* Divider */}
-        <div style={{ width: 1, height: 16, background: BRAND.color.border }} />
-
-        {/* Pipeline state */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{
-            color: !isIdle ? BRAND.color.sheen : BRAND.color["text-muted"],
-            fontSize: 10,
-            animation: !isIdle ? "sheenPulse 2s ease-in-out infinite" : "none",
-          }}>
-            {!isIdle ? "◐" : "○"}
-          </span>
-          <span style={{
-            fontSize: 11,
-            color: !isIdle ? BRAND.color.sheen : BRAND.color["text-secondary"],
-            fontWeight: !isIdle ? 500 : 400,
-            transition: "color 0.3s ease",
-          }}>
-            {pipelineState}
-          </span>
-        </div>
-
-        {/* Divider */}
-        <div style={{ width: 1, height: 16, background: BRAND.color.border }} />
-
-        {/* Uptime */}
-        <span style={{
-          fontSize: 11,
-          color: BRAND.color["text-muted"],
-          fontVariantNumeric: "tabular-nums",
-        }}>
-          {uptimeStr}
-        </span>
+      {/* Right: Version */}
+      <div style={{
+        fontSize: 10,
+        color: BRAND.color["text-muted"],
+        letterSpacing: "0.05em",
+      }}>
+        v0.1
       </div>
     </header>
+  );
+}
+
+function StatusPill({ label, value, color, pulse, mono }: {
+  label: string;
+  value: string;
+  color: string;
+  pulse?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <span style={{
+        fontSize: 9,
+        color: BRAND.color["text-muted"],
+        textTransform: "uppercase",
+        letterSpacing: "0.1em",
+      }}>
+        {label}
+      </span>
+      <span style={{
+        fontSize: 11,
+        color,
+        fontWeight: 500,
+        fontFamily: mono ? BRAND.font.mono : "inherit",
+        fontVariantNumeric: mono ? "tabular-nums" : undefined,
+        animation: pulse ? "sheenPulse 2s ease-in-out infinite" : "none",
+      }}>
+        {value}
+      </span>
+    </div>
   );
 }
 

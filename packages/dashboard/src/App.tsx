@@ -18,16 +18,6 @@ import { VoicePersonalityPanel } from "./components/VoicePersonalityPanel.js";
 import { TriggerManagerPanel } from "./components/TriggerManagerPanel.js";
 import { VisualizationPanel } from "./components/VisualizationPanel.js";
 
-const PANEL_STYLE: React.CSSProperties = {
-  background: "rgba(13,15,18,0.5)",
-  backdropFilter: "blur(20px) saturate(1.3)",
-  WebkitBackdropFilter: "blur(20px) saturate(1.3)",
-  border: `1px solid ${BRAND.color["glass-border"]}`,
-  borderRadius: 10,
-  padding: "12px 14px",
-  margin: "0 10px 8px 10px",
-};
-
 export function App() {
   const state = useGatewayState();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -35,7 +25,6 @@ export function App() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const pendingBootSound = useRef(false);
 
-  // Create AudioContext on first user gesture (browser autoplay policy)
   useEffect(() => {
     const initAudio = () => {
       if (!audioCtxRef.current) {
@@ -51,7 +40,6 @@ export function App() {
     };
   }, []);
 
-  // Play boot sound once audio is ready AND connected
   useEffect(() => {
     if (state.connected && audioReady && !pendingBootSound.current) {
       pendingBootSound.current = true;
@@ -64,8 +52,6 @@ export function App() {
     if (!ctx) return;
     try {
       const now = ctx.currentTime;
-
-      // Rising sweep
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = "sine";
@@ -77,7 +63,6 @@ export function App() {
       osc1.start(now);
       osc1.stop(now + 0.4);
 
-      // Digital click
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = "square";
@@ -88,7 +73,6 @@ export function App() {
       osc2.start(now + 0.15);
       osc2.stop(now + 0.25);
 
-      // C6 chime
       const osc3 = ctx.createOscillator();
       const gain3 = ctx.createGain();
       osc3.type = "sine";
@@ -99,7 +83,6 @@ export function App() {
       osc3.start(now + 0.25);
       osc3.stop(now + 0.6);
 
-      // E6 chime
       const osc4 = ctx.createOscillator();
       const gain4 = ctx.createGain();
       osc4.type = "sine";
@@ -153,9 +136,8 @@ export function App() {
 
   return (
     <div style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 340px",
-      gridTemplateRows: "52px 1fr",
+      display: "flex",
+      flexDirection: "column",
       height: "100vh",
       background: BRAND.color.bg,
       color: BRAND.color.white,
@@ -168,52 +150,37 @@ export function App() {
         uptime={state.uptime}
       />
 
-      {/* Left column: Orb + Brain + Timeline */}
       <div style={{
-        display: "flex",
-        flexDirection: "column",
+        flex: 1,
+        display: "grid",
+        gridTemplateColumns: "1fr 320px",
         overflow: "hidden",
-        position: "relative",
-        borderRight: `1px solid ${BRAND.color.border}`,
       }}>
-        {/* Orb + Memory Graph overlay */}
-        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          {/* Ambient background glow */}
+        {/* Left: Orb + Brain */}
+        <div style={{
+          position: "relative",
+          overflow: "hidden",
+          borderRight: `1px solid ${BRAND.color["glass-border"]}`,
+        }}>
+          {/* Ambient void glow */}
           <div style={{
             position: "absolute",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: 600,
-            height: 600,
+            width: 700,
+            height: 700,
             borderRadius: "50%",
             background: isActive
-              ? `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.08)} 0%, ${rgba(BRAND.color.sheen, 0.03)} 40%, transparent 70%)`
-              : `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.03)} 0%, transparent 60%)`,
-            transition: "background 1s ease",
+              ? `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.1)} 0%, ${rgba(BRAND.color.sheen, 0.04)} 30%, transparent 60%)`
+              : `radial-gradient(circle, ${rgba(BRAND.color.sheen, 0.03)} 0%, transparent 50%)`,
+            transition: "background 1.5s ease",
             pointerEvents: "none",
             zIndex: 0,
-            animation: isActive ? "orbGlowActive 4s ease-in-out infinite" : "orbGlow 6s ease-in-out infinite",
+            animation: isActive ? "orbGlowActive 4s ease-in-out infinite" : "orbGlow 8s ease-in-out infinite",
           }} />
 
-          {/* Orb centered */}
-          <div style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 280,
-            height: 280,
-            zIndex: 2,
-            pointerEvents: "none",
-            animation: "float 8s ease-in-out infinite",
-          }}>
-            <Canvas camera={{ position: [0, 0, 2.2], fov: 40 }}>
-              <Orb active={isActive} />
-            </Canvas>
-          </div>
-
-          {/* Memory graph (transparent, behind Orb) */}
+          {/* Brain particles (behind Orb) */}
           <BrainView
             memoryNodes={state.memoryNodes}
             pipelineState={state.pipelineState}
@@ -223,6 +190,23 @@ export function App() {
             activeNodes={state.activeNodes}
             onNodeClick={setSelectedNodeId}
           />
+
+          {/* Orb centered */}
+          <div style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 320,
+            height: 320,
+            zIndex: 2,
+            pointerEvents: "none",
+            animation: "float 10s ease-in-out infinite",
+          }}>
+            <Canvas camera={{ position: [0, 0, 2.4], fov: 38 }}>
+              <Orb active={isActive} />
+            </Canvas>
+          </div>
 
           {/* Greeting overlay */}
           <Greeting connected={state.connected} />
@@ -246,11 +230,11 @@ export function App() {
             />
           )}
 
-          {/* Pipeline state label */}
+          {/* Pipeline state indicator */}
           {state.pipelineState !== "idle" && (
             <div style={{
               position: "absolute",
-              bottom: 24,
+              bottom: 32,
               left: "50%",
               transform: "translateX(-50%)",
               fontFamily: BRAND.font.mono,
@@ -260,11 +244,11 @@ export function App() {
               letterSpacing: "0.2em",
               textTransform: "uppercase",
               animation: "sheenPulse 2s ease-in-out infinite",
-              textShadow: `0 0 24px ${rgba(BRAND.color.sheen, 0.4)}`,
+              textShadow: `0 0 20px ${rgba(BRAND.color.sheen, 0.5)}`,
               padding: "6px 16px",
-              borderRadius: 6,
+              borderRadius: 4,
               background: rgba(BRAND.color.sheen, 0.06),
-              border: `1px solid ${rgba(BRAND.color.sheen, 0.1)}`,
+              border: `1px solid ${rgba(BRAND.color.sheen, 0.12)}`,
               backdropFilter: "blur(12px)",
             }}>
               {state.pipelineState === "processing" ? "thinking" : state.pipelineState}
@@ -275,23 +259,23 @@ export function App() {
           {state.partialTranscript && (
             <div style={{
               position: "absolute",
-              bottom: 64,
+              bottom: 72,
               left: "50%",
               transform: "translateX(-50%)",
-              background: rgba(BRAND.color.bg, 0.85),
-              backdropFilter: "blur(16px)",
-              border: `1px solid ${BRAND.color["glass-border"]}`,
-              borderRadius: 10,
-              padding: "8px 18px",
+              background: rgba(BRAND.color.bg, 0.9),
+              backdropFilter: "blur(20px)",
+              border: `1px solid ${rgba(BRAND.color.sheen, 0.15)}`,
+              borderRadius: 8,
+              padding: "8px 20px",
               fontFamily: BRAND.font.mono,
               fontSize: 13,
               color: BRAND.color.sheen,
-              maxWidth: "80%",
+              maxWidth: "70%",
               textAlign: "center",
-              animation: "fadeIn 0.2s ease-out",
-              boxShadow: `0 4px 24px ${rgba(BRAND.color.sheen, 0.08)}`,
+              animation: "fadeIn 0.15s ease-out",
+              boxShadow: `0 0 30px ${rgba(BRAND.color.sheen, 0.1)}`,
             }}>
-              <span style={{ opacity: 0.35, marginRight: 6, fontSize: 11 }}>hearing</span>
+              <span style={{ opacity: 0.4, marginRight: 8, fontSize: 10 }}>listening</span>
               {state.partialTranscript}
               <span style={{ animation: "blink 1s infinite", marginLeft: 2, opacity: 0.5 }}>|</span>
             </div>
@@ -301,69 +285,68 @@ export function App() {
           {state.streamingText && (
             <div style={{
               position: "absolute",
-              bottom: 104,
+              bottom: 112,
               left: "50%",
               transform: "translateX(-50%)",
-              background: rgba(BRAND.color.bg, 0.85),
-              backdropFilter: "blur(16px)",
-              border: `1px solid ${rgba(BRAND.color.sheen, 0.12)}`,
-              borderRadius: 10,
-              padding: "10px 20px",
+              background: rgba(BRAND.color.bg, 0.9),
+              backdropFilter: "blur(20px)",
+              border: `1px solid ${rgba(BRAND.color.sheen, 0.1)}`,
+              borderRadius: 8,
+              padding: "10px 22px",
               fontFamily: BRAND.font.body,
               fontSize: 14,
               color: BRAND.color.white,
-              maxWidth: "80%",
+              maxWidth: "70%",
               textAlign: "center",
-              animation: "fadeIn 0.2s ease-out",
-              boxShadow: `0 4px 24px ${rgba(BRAND.color.sheen, 0.06)}`,
+              animation: "fadeIn 0.15s ease-out",
+              boxShadow: `0 0 40px ${rgba(BRAND.color.sheen, 0.08)}`,
               lineHeight: 1.6,
             }}>
               {state.streamingText}
               <span style={{ animation: "blink 1s infinite", marginLeft: 2, color: BRAND.color.sheen, opacity: 0.6 }}>|</span>
             </div>
           )}
+
+          {/* Delegation timeline at bottom */}
+          <DelegationTimeline events={state.delegationEvents} />
         </div>
 
-        <DelegationTimeline events={state.delegationEvents} />
-      </div>
-
-      {/* Right sidebar */}
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        background: rgba(BRAND.color.surface, 0.3),
-        backdropFilter: "blur(8px)",
-      }}>
+        {/* Right: Command panels */}
         <div style={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          paddingTop: 8,
-          paddingBottom: 16,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          background: rgba(BRAND.color.surface, 0.2),
         }}>
-          <ActivityPanel
-            activityLog={state.activityLog}
-            onInterrupt={handleInterrupt}
-            pipelineState={state.pipelineState}
-          />
-          <DiagnosticsPanel
-            cost={state.cost}
-            memoryStats={state.memoryStats}
-          />
-          <ToolPermissionsPanel
-            permissions={state.toolPermissions}
-          />
-          <MemoryPanel
-            nodes={state.memoryNodes}
-            stats={state.memoryStats}
-            onConsolidate={handleConsolidate}
-          />
-          <SuggestionsPanel />
-          <IntegrationsPanel />
-          <WorkflowManager />
-          <VoicePersonalityPanel />
-          <TriggerManagerPanel />
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px 0",
+          }}>
+            <ActivityPanel
+              activityLog={state.activityLog}
+              onInterrupt={handleInterrupt}
+              pipelineState={state.pipelineState}
+            />
+            <DiagnosticsPanel
+              cost={state.cost}
+              memoryStats={state.memoryStats}
+            />
+            <ToolPermissionsPanel
+              permissions={state.toolPermissions}
+            />
+            <MemoryPanel
+              nodes={state.memoryNodes}
+              stats={state.memoryStats}
+              onConsolidate={handleConsolidate}
+            />
+            <SuggestionsPanel />
+            <IntegrationsPanel />
+            <WorkflowManager />
+            <VoicePersonalityPanel />
+            <TriggerManagerPanel />
+          </div>
         </div>
       </div>
     </div>

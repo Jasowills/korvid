@@ -35,6 +35,8 @@ function createLocalTTS(): TTSEngine {
       interruptCallback = opts?.onInterrupt;
       stoppedIntentionally = false;
 
+      console.log(`[tts] Speaking: "${text.slice(0, 60)}${text.length > 60 ? "..." : ""}"`);
+
       return new Promise<void>((resolve, reject) => {
         const isMac = process.platform === "darwin";
 
@@ -43,11 +45,24 @@ function createLocalTTS(): TTSEngine {
           : ["-w", "-", text];
 
         const cmd = isMac ? "say" : "espeak";
+        console.log(`[tts] Spawning: ${cmd} ${args.slice(0, 2).join(" ")}`);
 
         currentProcess = spawn(cmd, args);
 
+        currentProcess.on("error", (err) => {
+          console.error(`[tts] Process error: ${err.message}`);
+          currentProcess = null;
+          reject(err);
+        });
+
+        currentProcess.stderr?.on("data", (data: Buffer) => {
+          const msg = data.toString().trim();
+          if (msg) console.log(`[tts] stderr: ${msg}`);
+        });
+
         currentProcess.on("close", (code) => {
           currentProcess = null;
+          console.log(`[tts] Process exited with code ${code}`);
           if (stoppedIntentionally) {
             interruptCallback?.();
             resolve();

@@ -108,10 +108,15 @@ export const startCommand = new Command("start")
           });
 
           const wakeWord = createWakeWordDetector(config);
+          log.debug("wake word detector created");
           const stt = createSTT(config);
+          log.debug("STT created", { provider: config.voice.stt.provider });
           const tts = createTTS(config);
+          log.debug("TTS created", { provider: config.voice.tts.provider });
           const reasoning = createReasoningClient(config);
+          log.debug("reasoning client created");
           const sounds = new SoundLibrary();
+          log.debug("sound library created");
 
           // Create tool registry for the pipeline
           const { createDefaultRegistry, toolsToFunctionSchema } = await import("@korvid/tools");
@@ -194,6 +199,7 @@ export const startCommand = new Command("start")
               vadSilenceMs: config.voice.vadSilenceMs,
             },
           } as any);
+          log.debug("voice pipeline created");
 
           // Wire pipeline events to dashboard via gateway broadcasts
           voicePipeline.on("pipeline", (event: any) => {
@@ -229,9 +235,13 @@ export const startCommand = new Command("start")
           await voicePipeline.start();
           log.info("voice pipeline started");
 
-          // Broadcast greeting on startup
+          // Speak greeting via TTS on startup
           const { getGreeting } = await import("@korvid/voice");
           const greeting = getGreeting();
+          log.info("greeting", { text: greeting });
+          console.log(chalk.hex("#7C8CFF")(`  ${STATUS_GLYPH.active} greeting: "${greeting}"`));
+
+          // Broadcast greeting to dashboard
           gateway.broadcast({ type: "pipeline", state: "idle" });
           gateway.broadcast({ type: "activity", entry: {
             id: `greeting-${Date.now()}`,
@@ -240,7 +250,20 @@ export const startCommand = new Command("start")
             message: greeting,
             status: "completed",
           }});
-          log.info("greeting broadcast", { greeting });
+
+          // Speak the greeting via TTS
+          console.log(chalk.dim(`  speaking greeting...`));
+          try {
+            log.info("speaking greeting via TTS", { provider: config.voice.tts.provider });
+            const ttsStart = Date.now();
+            await tts.speak(greeting);
+            const ttsDuration = Date.now() - ttsStart;
+            log.info("greeting spoken successfully", { durationMs: ttsDuration });
+            console.log(chalk.dim(`  greeting spoken (${ttsDuration}ms)`));
+          } catch (ttsErr) {
+            log.error("TTS greeting failed", { error: String(ttsErr), stack: ttsErr instanceof Error ? ttsErr.stack : undefined });
+            console.log(chalk.hex("#FF6B4A")(`  ${STATUS_GLYPH.error} TTS greeting failed: ${ttsErr}`));
+          }
 
           console.log(chalk.hex("#7C8CFF")(`  ${STATUS_GLYPH.active} voice pipeline active`));
           console.log(chalk.dim(`  wake word: ${config.voice.wakeWord.engine}`));
