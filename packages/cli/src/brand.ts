@@ -1,13 +1,16 @@
 export const BRAND_CLI = {
   color: {
-    obsidian: "#12151A",
-    graphite: "#1C2126",
-    slate: "#2A3138",
-    bone: "#E8EAED",
+    obsidian: "#0E1013",
+    graphite: "#191C20",
+    slate: "#2A2E33",
+    ash: "#6B7076",
+    bone: "#EDEEF0",
     sheen: "#7C8CFF",
+    spark: "#FFB648",
     ember: "#FF6B4A",
   },
   font: {
+    display: "'Space Grotesk', system-ui, sans-serif",
     mono: "'IBM Plex Mono', 'Menlo', monospace",
   },
 } as const;
@@ -51,5 +54,5 @@ export function brandBoot() {
 }
 
 export function brandFooter() {
-  return `\n  \x1b[2mkorvid v0.1.0 — personal ai assistant\x1b[0m`;
+  return `\n  \x1b[2mKorvid v0.1.0 — personal ai assistant\x1b[0m`;
 }
