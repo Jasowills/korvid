@@ -113,6 +113,12 @@ export const startCommand = new Command("start")
           const reasoning = createReasoningClient(config);
           const sounds = new SoundLibrary();
 
+          // Create tool registry for the pipeline
+          const { createDefaultRegistry, toolsToFunctionSchema } = await import("@korvid/tools");
+          const toolRegistry = createDefaultRegistry();
+          const toolDefs = toolsToFunctionSchema(toolRegistry.list());
+          log.info("tools loaded", { count: toolRegistry.list().length });
+
           // Create clap detector if enabled
           let clapDetector: any = undefined;
           if (config.voice.clapActivation?.enabled) {
@@ -161,6 +167,14 @@ export const startCommand = new Command("start")
             tts,
             sounds: { play: (name: string) => sounds.play(name as any) },
             clapDetector,
+            tools: {
+              definitions: toolDefs as any,
+              execute: async (name: string, args: Record<string, unknown>) => {
+                const result = await toolRegistry.execute(name, args, config);
+                log.info("tool executed", { name, success: result.result.success });
+                return result.result.output || result.result.error || "(no output)";
+              },
+            },
             config: {
               sessionPersist: config.voice.sessionPersist,
               sessionPath: config.voice.sessionPath,
@@ -169,26 +183,53 @@ export const startCommand = new Command("start")
             },
           } as any);
 
-          // Wire pipeline state to dashboard via gateway broadcasts
+          // Wire pipeline events to dashboard via gateway broadcasts
+          voicePipeline.on("pipeline", (event: any) => {
+            log.debug("pipeline event", { state: event.state });
+            gateway.broadcast({ type: "pipeline", state: event.state });
+            if (event.partialTranscript) {
+              gateway.broadcast({ type: "partial_transcript", text: event.partialTranscript });
+            }
+            if (event.streamingToken) {
+              gateway.broadcast({ type: "streaming_token", token: event.streamingToken, done: false });
+            }
+            if (event.transcript && event.response) {
+              gateway.broadcast({ type: "activity", entry: {
+                id: `act-${Date.now()}`,
+                timestamp: Date.now(),
+                type: "reasoning",
+                message: `User: ${event.transcript}\nKorvid: ${event.response}`,
+                status: "completed",
+              }});
+            }
+          });
           voicePipeline.on("state", (state: string) => {
             log.debug("pipeline state", { state });
-            gateway.broadcast({ type: "pipeline_state", state });
+            gateway.broadcast({ type: "pipeline", state });
           });
-          voicePipeline.on("transcript", (text: string) => {
-            log.debug("transcript", { text: text.slice(0, 80) });
+          voicePipeline.on("streaming_token", (token: string) => {
+            gateway.broadcast({ type: "streaming_token", token, done: false });
+          });
+          voicePipeline.on("partial_transcript", (text: string) => {
             gateway.broadcast({ type: "partial_transcript", text });
-          });
-          voicePipeline.on("response", (text: string) => {
-            log.debug("response", { text: text.slice(0, 80) });
-            gateway.broadcast({ type: "streaming_token", text, done: true });
-          });
-          voicePipeline.on("activity", (entry: any) => {
-            log.info("activity", entry);
-            gateway.broadcast({ type: "activity", entry });
           });
 
           await voicePipeline.start();
           log.info("voice pipeline started");
+
+          // Broadcast greeting on startup
+          const { getGreeting } = await import("@korvid/voice");
+          const greeting = getGreeting();
+          gateway.broadcast({ type: "pipeline", state: "idle" });
+          gateway.broadcast({ type: "activity", entry: {
+            id: `greeting-${Date.now()}`,
+            timestamp: Date.now(),
+            type: "reasoning",
+            message: greeting,
+            status: "completed",
+          }});
+          log.info("greeting broadcast", { greeting });
+
           console.log(chalk.hex("#7C8CFF")(`  ${STATUS_GLYPH.active} voice pipeline active`));
           console.log(chalk.dim(`  wake word: ${config.voice.wakeWord.engine}`));
           console.log(chalk.dim(`  stt: ${config.voice.stt.provider}`));
