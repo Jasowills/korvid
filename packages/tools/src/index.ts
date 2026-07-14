@@ -7,6 +7,7 @@ export { openAppTool, closeAppTool, listAppsTool } from "./app-control.js";
 export { clipboardReadTool, clipboardWriteTool } from "./clipboard.js";
 export { listFilesTool, readFileTool, writeFileTool } from "./filesystem.js";
 export { runCommandTool } from "./command.js";
+export { visualizeTool } from "./visualize.js";
 export { createToolCallingReasoning, type ToolCallingReasoningClient, type ToolCallingResult } from "./tool-calling.js";
 
 import { createToolRegistry, type ToolRegistry } from "./registry.js";
@@ -15,6 +16,7 @@ import { openAppTool, closeAppTool, listAppsTool } from "./app-control.js";
 import { clipboardReadTool, clipboardWriteTool } from "./clipboard.js";
 import { listFilesTool, readFileTool, writeFileTool } from "./filesystem.js";
 import { runCommandTool } from "./command.js";
+import { visualizeTool } from "./visualize.js";
 
 export function createDefaultRegistry(): ToolRegistry {
   const registry = createToolRegistry();
@@ -28,5 +30,6 @@ export function createDefaultRegistry(): ToolRegistry {
   registry.register(readFileTool);
   registry.register(writeFileTool);
   registry.register(runCommandTool);
+  registry.register(visualizeTool);
   return registry;
 }

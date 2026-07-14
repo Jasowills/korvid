@@ -298,6 +298,30 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
           return;
         }
 
+        // Visualize API — push visualization data to dashboard
+        if (req.url === "/api/visualize" && req.method === "POST") {
+          const token = req.headers["x-auth-token"] as string;
+          if (!authenticateClient(null as any, token)) {
+            res.statusCode = 401;
+            res.end(JSON.stringify({ error: "Unauthorized" }));
+            return;
+          }
+          let body = "";
+          req.on("data", (chunk) => body += chunk);
+          req.on("end", () => {
+            try {
+              const viz = JSON.parse(body);
+              broadcastToSubscribers({ type: "visualize", viz });
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ ok: true }));
+            } catch {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: "Invalid JSON" }));
+            }
+          });
+          return;
+        }
+
         // Voice personality API
         if (req.url === "/api/voice-personality") {
           const token = req.headers["x-auth-token"] as string;
@@ -435,6 +459,8 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
                 token: String(msg.token ?? ""),
                 done: !!msg.done,
               });
+            } else if (msg.type === "visualize") {
+              broadcastToSubscribers({ type: "visualize", viz: msg.viz ?? { type: "clear" } });
             }
           } catch {
             // ignore

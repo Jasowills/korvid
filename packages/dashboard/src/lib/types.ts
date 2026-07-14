@@ -1,3 +1,17 @@
+export interface VizData {
+  type: "chart" | "diagram" | "table" | "markdown" | "code" | "clear";
+  title?: string;
+  chartKind?: "line" | "bar" | "pie" | "area";
+  data?: Record<string, unknown>[];
+  xKey?: string;
+  yKeys?: string[];
+  colors?: string[];
+  columns?: string[];
+  rows?: unknown[][];
+  content?: string;
+  language?: string;
+}
+
 export interface GatewayState {
   connected: boolean;
   uptime: number;
@@ -13,6 +27,7 @@ export interface GatewayState {
   streamingDone?: boolean;
   toolPermissions: ToolPermissions;
   memoryStats: MemoryStats;
+  viz: VizData | null;
 }
 
 export interface MemoryNode {
@@ -99,4 +114,5 @@ export const EMPTY_STATE: GatewayState = {
   delegationEvents: [],
   toolPermissions: { enabled: true, allow: [], deny: [], requireConfirmation: [] },
   memoryStats: { coreCount: 0, episodicCount: 0, totalEpisodicAccess: 0, avgEpisodicImportance: 0, edgeCount: 0 },
+  viz: null,
 };

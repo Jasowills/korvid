@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { BRAND } from "./lib/brand.js";
 import { useGatewayState } from "./hooks/useGatewayState.js";
@@ -15,10 +15,94 @@ import { DelegationTimeline } from "./components/DelegationTimeline.js";
 import { WorkflowManager } from "./components/WorkflowManager.js";
 import { VoicePersonalityPanel } from "./components/VoicePersonalityPanel.js";
 import { TriggerManagerPanel } from "./components/TriggerManagerPanel.js";
+import { VisualizationPanel } from "./components/VisualizationPanel.js";
 
 export function App() {
   const state = useGatewayState();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [bootSoundPlayed, setBootSoundPlayed] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Jarvis boot sound on first connection
+  useEffect(() => {
+    if (state.connected && !bootSoundPlayed) {
+      setBootSoundPlayed(true);
+      playBootSound();
+    }
+  }, [state.connected, bootSoundPlayed]);
+
+  function playBootSound() {
+    try {
+      const ctx = new AudioContext();
+      audioCtxRef.current = ctx;
+      const now = ctx.currentTime;
+
+      // Rising sweep: 200Hz -> 800Hz over 0.3s
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(200, now);
+      osc1.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+      gain1.gain.setValueAtTime(0.08, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc1.connect(gain1).connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.4);
+
+      // Digital click at 0.15s
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "square";
+      osc2.frequency.setValueAtTime(1200, now + 0.15);
+      gain2.gain.setValueAtTime(0.04, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc2.connect(gain2).connect(ctx.destination);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 0.25);
+
+      // Chime: C6 (1047Hz) at 0.25s
+      const osc3 = ctx.createOscillator();
+      const gain3 = ctx.createGain();
+      osc3.type = "sine";
+      osc3.frequency.setValueAtTime(1047, now + 0.25);
+      gain3.gain.setValueAtTime(0.06, now + 0.25);
+      gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc3.connect(gain3).connect(ctx.destination);
+      osc3.start(now + 0.25);
+      osc3.stop(now + 0.6);
+
+      // Second chime: E6 (1319Hz) at 0.35s
+      const osc4 = ctx.createOscillator();
+      const gain4 = ctx.createGain();
+      osc4.type = "sine";
+      osc4.frequency.setValueAtTime(1319, now + 0.35);
+      gain4.gain.setValueAtTime(0.04, now + 0.35);
+      gain4.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+      osc4.connect(gain4).connect(ctx.destination);
+      osc4.start(now + 0.35);
+      osc4.stop(now + 0.7);
+    } catch {
+      // AudioContext not available
+    }
+  }
+
+  function playClapSound() {
+    try {
+      const ctx = audioCtxRef.current ?? new AudioContext();
+      const now = ctx.currentTime;
+
+      // Sharp click
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1047, now);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {}
+  }
 
   const handleInterrupt = () => {
     (state as any).interrupt?.();
@@ -32,6 +116,16 @@ export function App() {
 
   const connectionState = state.connected ? "connected" : "disconnected";
   const isActive = state.pipelineState !== "idle";
+  const hasViz = state.viz && state.viz.type !== "clear";
+
+  // Play clap sound when entering listening
+  const prevStateRef = useRef(state.pipelineState);
+  useEffect(() => {
+    if (state.pipelineState === "listening" && prevStateRef.current !== "listening") {
+      playClapSound();
+    }
+    prevStateRef.current = state.pipelineState;
+  }, [state.pipelineState]);
 
   return (
     <div style={{
@@ -79,6 +173,26 @@ export function App() {
             activeNodes={state.activeNodes}
             onNodeClick={setSelectedNodeId}
           />
+
+          {/* Visualization overlay — charts, diagrams, tables, code, markdown */}
+          {hasViz && (
+            <VisualizationPanel
+              viz={state.viz}
+              onClose={() => {
+                // Send clear event to gateway
+                try {
+                  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                  const host = window.location.hostname || "127.0.0.1";
+                  const ws = new WebSocket(`${protocol}//${host}:3847`);
+                  ws.onopen = () => {
+                    ws.send(JSON.stringify({ type: "subscribe" }));
+                    ws.send(JSON.stringify({ type: "visualize", viz: { type: "clear" } }));
+                    ws.close();
+                  };
+                } catch {}
+              }}
+            />
+          )}
 
           {/* Pipeline state label */}
           {state.pipelineState !== "idle" && (

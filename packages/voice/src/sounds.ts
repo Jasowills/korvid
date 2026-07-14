@@ -12,7 +12,9 @@ export type SoundName =
   | "failure"
   | "reminder"
   | "interrupt"
-  | "clap-boot";
+  | "clap-boot"
+  | "boot"
+  | "clap-ack";
 
 export class SoundLibrary {
   private generated = new Map<SoundName, string>();
@@ -71,8 +73,13 @@ export class SoundLibrary {
   }
 
   private generateSound(name: SoundName, outputPath: string): void {
-    if (name === "clap-boot") {
+    if (name === "clap-boot" || name === "boot") {
       this.generateBootSequence(outputPath);
+      return;
+    }
+
+    if (name === "clap-ack") {
+      this.generateClapAck(outputPath);
       return;
     }
 
@@ -187,6 +194,26 @@ export class SoundLibrary {
       } catch {
         // Give up
       }
+    }
+  }
+
+  private generateClapAck(outputPath: string): void {
+    // Short digital click + rising shimmer — immediate acknowledgment
+    try {
+      execFileSync(
+        "ffmpeg",
+        ["-y",
+         "-f", "lavfi", "-i", "sine=frequency=1047:duration=0.08",
+         "-f", "lavfi", "-i", "sine=frequency=1568:duration=0.06",
+         "-filter_complex",
+         "[0:a]afade=t=in:st=0:d=0.003,afade=t=out:st=0.05:d=0.03,volume=0.7[a];" +
+         "[1:a]adelay=30|30,afade=t=in:st=0:d=0.003,afade=t=out:st=0.03:d=0.03,volume=0.4[b];" +
+         "[a][b]amix=inputs=2:duration=longest:normalize=0[out]",
+         "-map", "[out]", outputPath],
+        { stdio: "pipe", shell: true }
+      );
+    } catch {
+      // fallback
     }
   }
 }

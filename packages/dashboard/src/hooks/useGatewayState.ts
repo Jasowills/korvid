@@ -74,6 +74,8 @@ export function useGatewayState(): GatewayState {
           });
         } else if (msg.type === "tool_permissions") {
           setState((s) => ({ ...s, toolPermissions: msg.permissions }));
+        } else if (msg.type === "visualize") {
+          setState((s) => ({ ...s, viz: msg.viz ?? null }));
         }
       } catch {
         // ignore

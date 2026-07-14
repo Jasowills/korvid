@@ -6,7 +6,7 @@ describe("ToolRegistry", () => {
 
   it("registers all default tools", () => {
     const tools = registry.list();
-    expect(tools.length).toBe(10);
+    expect(tools.length).toBe(11);
   });
 
   it("can get tool by name", () => {
@@ -24,7 +24,7 @@ describe("ToolRegistry", () => {
 
   it("generates function schema for LLM consumption", () => {
     const schema = toolsToFunctionSchema(registry.list());
-    expect(schema.length).toBe(10);
+    expect(schema.length).toBe(11);
     expect(schema[0]).toHaveProperty("type", "function");
     expect((schema[0] as any).function).toHaveProperty("name");
     expect((schema[0] as any).function).toHaveProperty("parameters");

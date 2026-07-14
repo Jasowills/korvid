@@ -237,7 +237,8 @@ export function createVoicePipeline(deps: {
 
     console.log("[clap-detector] Clap activation triggered!");
 
-    // Play boot-up sound sequence
+    // Play immediate acknowledgment, then full boot sequence
+    await deps.sounds.play("clap-ack");
     await deps.sounds.play("clap-boot");
 
     // Speak a greeting
@@ -582,6 +583,9 @@ export function createVoicePipeline(deps: {
 
   return {
     async start() {
+      // Play boot sound on first init
+      deps.sounds.play("boot").catch(() => {});
+
       deps.wakeWord.onWake(handleWake);
       await deps.wakeWord.start();
 
