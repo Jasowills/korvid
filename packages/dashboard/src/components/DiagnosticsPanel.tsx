@@ -12,14 +12,14 @@ export function DiagnosticsPanel({ cost, memoryStats }: DiagnosticsPanelProps) {
 
   return (
     <div style={{
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "12px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 11,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginBottom: 10,
@@ -36,14 +36,14 @@ export function DiagnosticsPanel({ cost, memoryStats }: DiagnosticsPanelProps) {
           fontSize: 11,
           marginBottom: 4,
         }}>
-          <span style={{ color: BRAND.color.bone }}>budget</span>
-          <span style={{ color: isOverBudget ? BRAND.color.ember : BRAND.color.slate }}>
+          <span style={{ color: BRAND.color.white }}>budget</span>
+          <span style={{ color: isOverBudget ? BRAND.color.ember : BRAND.color.border }}>
             ${cost.totalCostUsd.toFixed(2)} / ${cost.budgetCapUsd}
           </span>
         </div>
         <div style={{
           height: 4,
-          background: BRAND.color.slate,
+          background: BRAND.color.border,
           borderRadius: 2,
           overflow: "hidden",
         }}>
@@ -74,7 +74,7 @@ export function DiagnosticsPanel({ cost, memoryStats }: DiagnosticsPanelProps) {
           <div style={{
             fontFamily: BRAND.font.mono,
             fontSize: 10,
-            color: BRAND.color.slate,
+            color: BRAND.color.border,
             letterSpacing: "0.05em",
             textTransform: "uppercase",
             marginBottom: 6,
@@ -89,8 +89,8 @@ export function DiagnosticsPanel({ cost, memoryStats }: DiagnosticsPanelProps) {
               fontSize: 11,
               padding: "2px 0",
             }}>
-              <span style={{ color: BRAND.color.bone }}>{name}</span>
-              <span style={{ color: BRAND.color.slate }}>
+              <span style={{ color: BRAND.color.white }}>{name}</span>
+              <span style={{ color: BRAND.color.border }}>
                 {typedInfo.calls} calls · {typedInfo.totalMs > 0 ? `${Math.round(typedInfo.totalMs / typedInfo.calls)}ms avg` : "—"}
               </span>
             </div>
@@ -104,7 +104,7 @@ export function DiagnosticsPanel({ cost, memoryStats }: DiagnosticsPanelProps) {
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
     <div style={{
-      background: BRAND.color.obsidian,
+      background: BRAND.color.bg,
       borderRadius: 4,
       padding: "6px 8px",
       textAlign: "center",
@@ -113,14 +113,14 @@ function StatBox({ label, value }: { label: string; value: string }) {
         fontFamily: BRAND.font.mono,
         fontSize: 14,
         fontWeight: 500,
-        color: BRAND.color.bone,
+        color: BRAND.color.white,
       }}>
         {value}
       </div>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 9,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginTop: 2,

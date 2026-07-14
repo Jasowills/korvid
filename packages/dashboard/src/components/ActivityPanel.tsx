@@ -25,13 +25,13 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
-      background: BRAND.color.graphite,
-      borderLeft: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderLeft: "none",
     }}>
       {/* Header */}
       <div style={{
         padding: "12px 16px",
-        borderBottom: `1px solid ${BRAND.color.slate}`,
+        borderBottom: `1px solid ${BRAND.color.border}`,
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
@@ -39,7 +39,7 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
         <span style={{
           fontFamily: BRAND.font.mono,
           fontSize: 11,
-          color: BRAND.color.slate,
+          color: BRAND.color.border,
           letterSpacing: "0.05em",
           textTransform: "uppercase",
         }}>
@@ -74,7 +74,7 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
             padding: "24px 16px",
             fontFamily: BRAND.font.mono,
             fontSize: 12,
-            color: BRAND.color.slate,
+            color: BRAND.color.border,
             textAlign: "center",
           }}>
             no activity
@@ -88,14 +88,14 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
               alignItems: "flex-start",
               gap: 8,
               padding: "6px 16px",
-              borderBottom: `1px solid ${rgba(BRAND.color.slate, 0.3)}`,
+              borderBottom: `1px solid ${rgba(BRAND.color.border, 0.3)}`,
               animation: "fadeIn 0.2s ease-out",
             }}
           >
             <span style={{
               fontFamily: BRAND.font.mono,
               fontSize: 12,
-              color: TYPE_ICONS[entry.type] === "✕" ? BRAND.color.ember : BRAND.color.slate,
+              color: TYPE_ICONS[entry.type] === "✕" ? BRAND.color.ember : BRAND.color.border,
               flexShrink: 0,
               marginTop: 1,
             }}>
@@ -105,7 +105,7 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
               <div style={{
                 fontFamily: BRAND.font.mono,
                 fontSize: 12,
-                color: BRAND.color.bone,
+                color: BRAND.color.white,
                 lineHeight: 1.4,
                 wordBreak: "break-word",
               }}>
@@ -114,7 +114,7 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
               <div style={{
                 fontFamily: BRAND.font.mono,
                 fontSize: 10,
-                color: BRAND.color.slate,
+                color: BRAND.color.border,
                 marginTop: 2,
               }}>
                 {new Date(entry.timestamp).toLocaleTimeString()}
@@ -124,7 +124,7 @@ export function ActivityPanel({ activityLog, onInterrupt, pipelineState }: Activ
               <span style={{
                 fontFamily: BRAND.font.mono,
                 fontSize: 10,
-                color: STATUS_COLOR[entry.status as keyof typeof STATUS_COLOR] ?? BRAND.color.slate,
+                color: STATUS_COLOR[entry.status as keyof typeof STATUS_COLOR] ?? BRAND.color.border,
                 flexShrink: 0,
                 marginTop: 2,
               }}>

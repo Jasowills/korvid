@@ -27,14 +27,14 @@ export function IntegrationsPanel(_props: IntegrationsPanelProps) {
 
   return (
     <div style={{
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "12px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 11,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginBottom: 10,
@@ -56,14 +56,14 @@ function IntegrationRow({ name, provider, enabled }: { name: string; provider: s
       alignItems: "center",
       padding: "4px 0",
     }}>
-      <span style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.bone }}>{name}</span>
+      <span style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.white }}>{name}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate }}>{provider}</span>
+        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border }}>{provider}</span>
         <span style={{
           width: 6,
           height: 6,
           borderRadius: "50%",
-          background: enabled ? "#48BB78" : BRAND.color.slate,
+          background: enabled ? "#48BB78" : BRAND.color.border,
         }} />
       </div>
     </div>

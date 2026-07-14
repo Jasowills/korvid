@@ -14,6 +14,7 @@ import { memoryCommand } from "./commands/memory.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { modelsCommand } from "./commands/models.js";
 import { channelsCommand } from "./commands/channels.js";
+import { logsCommand } from "./commands/logs.js";
 import { configExists, loadConfig } from "@korvid/shared/config-file.js";
 
 const program = new Command();
@@ -35,6 +36,7 @@ program.addCommand(memoryCommand);
 program.addCommand(doctorCommand);
 program.addCommand(modelsCommand);
 program.addCommand(channelsCommand);
+program.addCommand(logsCommand);
 
 // ── Bare command routing ──────────────────────────────────────────
 async function main() {

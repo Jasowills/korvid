@@ -247,6 +247,7 @@ async function runQuickStart(): Promise<KorvidConfig> {
       wakeWord: { engine: "manual" },
       stt: { provider: "local-whisper" },
       tts: { provider: "local" },
+      clapActivation: { enabled: true, clapWindowMs: 700, sensitivity: 0.5 },
     },
     gateway: { port: 3847 },
   });
@@ -460,6 +461,11 @@ async function runAdvancedWizard(): Promise<KorvidConfig> {
     await p.confirm({ message: "Enable gateway auth token?", initialValue: true })
   );
 
+  // ── Clap Activation ──────────────────────────────────────────────
+  const enableClap = cancelGuard(
+    await p.confirm({ message: "Enable clap-to-wake?", initialValue: true })
+  );
+
   // ── Assemble ───────────────────────────────────────────────────
   const config: KorvidConfig = KorvidConfigSchema.parse({
     models: {
@@ -470,6 +476,7 @@ async function runAdvancedWizard(): Promise<KorvidConfig> {
       wakeWord: { engine: wakeEngine },
       stt: { provider: sttProvider, apiKey: sttApiKey },
       tts: { provider: ttsProvider, apiKey: ttsApiKey, voiceId: ttsVoiceId },
+      clapActivation: { enabled: enableClap, clapWindowMs: 700, sensitivity: 0.5 },
     },
     gateway: {
       port,

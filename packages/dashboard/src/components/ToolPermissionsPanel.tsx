@@ -32,8 +32,8 @@ export function ToolPermissionsPanel({ permissions, onUpdate }: ToolPermissionsP
 
   return (
     <div style={{
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "12px 16px",
     }}>
       <div style={{
@@ -45,7 +45,7 @@ export function ToolPermissionsPanel({ permissions, onUpdate }: ToolPermissionsP
         <span style={{
           fontFamily: BRAND.font.mono,
           fontSize: 11,
-          color: BRAND.color.slate,
+          color: BRAND.color.border,
           letterSpacing: "0.05em",
           textTransform: "uppercase",
         }}>
@@ -55,8 +55,8 @@ export function ToolPermissionsPanel({ permissions, onUpdate }: ToolPermissionsP
           onClick={toggleAll}
           aria-label={localPerms.enabled ? "Disable tool permissions" : "Enable tool permissions"}
           style={{
-            background: localPerms.enabled ? BRAND.color.sheen : BRAND.color.slate,
-            color: localPerms.enabled ? "#fff" : BRAND.color.bone,
+            background: localPerms.enabled ? BRAND.color.sheen : BRAND.color.border,
+            color: localPerms.enabled ? "#fff" : BRAND.color.white,
             border: "none",
             borderRadius: 4,
             padding: "2px 8px",
@@ -70,10 +70,10 @@ export function ToolPermissionsPanel({ permissions, onUpdate }: ToolPermissionsP
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "4px 8px", alignItems: "center" }}>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate, textTransform: "uppercase" }}>tool</span>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate, textTransform: "uppercase", textAlign: "center" }}>allow</span>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate, textTransform: "uppercase", textAlign: "center" }}>deny</span>
-        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate, textTransform: "uppercase", textAlign: "center" }}>confirm</span>
+        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase" }}>tool</span>
+        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase", textAlign: "center" }}>allow</span>
+        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase", textAlign: "center" }}>deny</span>
+        <span style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, textTransform: "uppercase", textAlign: "center" }}>confirm</span>
 
         {TOOLS.map((tool) => (
           <Row
@@ -94,7 +94,7 @@ function Row({ tool, perms, onToggle }: { tool: string; perms: ToolPermissions; 
 
   return (
     <>
-      <span style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.bone }}>{tool}</span>
+      <span style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.white }}>{tool}</span>
       {(["allow", "deny", "requireConfirmation"] as const).map((list) => (
         <label key={list} style={{ textAlign: "center", cursor: "pointer" }}>
           <input

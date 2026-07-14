@@ -32,14 +32,14 @@ export function VoicePersonalityPanel(_props: VoicePersonalityPanelProps) {
 
   return (
     <div style={{
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "12px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 11,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginBottom: 10,
@@ -49,10 +49,10 @@ export function VoicePersonalityPanel(_props: VoicePersonalityPanelProps) {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 12, color: BRAND.color.bone }}>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 12, color: BRAND.color.white }}>
             {status.activeProfile}
           </div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate, marginTop: 2 }}>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, marginTop: 2 }}>
             {PROFILE_DESCRIPTIONS[status.activeProfile] ?? "custom"}
           </div>
         </div>
@@ -64,7 +64,7 @@ export function VoicePersonalityPanel(_props: VoicePersonalityPanelProps) {
           textTransform: "uppercase",
           padding: "2px 6px",
           borderRadius: 2,
-          background: BRAND.color.obsidian,
+          background: BRAND.color.bg,
         }}>
           active
         </span>
@@ -72,15 +72,15 @@ export function VoicePersonalityPanel(_props: VoicePersonalityPanelProps) {
 
       {status.customProfiles.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate, marginBottom: 4 }}>custom profiles</div>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, marginBottom: 4 }}>custom profiles</div>
           {status.customProfiles.map((p) => (
             <div key={p.name} style={{
               fontFamily: BRAND.font.mono,
               fontSize: 11,
-              color: BRAND.color.bone,
+              color: BRAND.color.white,
               padding: "2px 0",
             }}>
-              {p.name} · <span style={{ color: BRAND.color.slate }}>{p.personality}</span>
+              {p.name} · <span style={{ color: BRAND.color.border }}>{p.personality}</span>
             </div>
           ))}
         </div>

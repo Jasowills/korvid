@@ -1,4 +1,4 @@
-import { BRAND, rgba, STATUS_ICON } from "../lib/brand.js";
+import { BRAND, STATUS_ICON } from "../lib/brand.js";
 
 interface HeaderProps {
   connectionState: string;
@@ -8,10 +8,10 @@ interface HeaderProps {
 
 export function Header({ connectionState, pipelineState, uptime }: HeaderProps) {
   const uptimeStr = formatUptime(uptime);
-  const pipelineColor = pipelineState === "idle" ? BRAND.color.slate
+  const pipelineColor = pipelineState === "idle" ? BRAND.color["text-muted"]
     : pipelineState === "listening" ? BRAND.color.sheen
     : pipelineState === "processing" ? BRAND.color.sheen
-    : BRAND.color.bone;
+    : BRAND.color.white;
 
   return (
     <header style={{
@@ -19,46 +19,58 @@ export function Header({ connectionState, pipelineState, uptime }: HeaderProps) 
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "0 24px",
-      height: 56,
-      background: BRAND.color.graphite,
-      borderBottom: `1px solid ${BRAND.color.slate}`,
+      padding: "0 20px",
+      height: 48,
+      background: "rgba(13,15,18,0.4)",
+      backdropFilter: "blur(24px) saturate(1.4)",
+      WebkitBackdropFilter: "blur(24px) saturate(1.4)",
+      borderBottom: `1px solid ${BRAND.color["glass-border"]}`,
       fontFamily: BRAND.font.mono,
+      zIndex: 100,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Orb icon */}
+        <div style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: pipelineState !== "idle" ? BRAND.color.sheen : BRAND.color["text-muted"],
+          boxShadow: pipelineState !== "idle" ? `0 0 12px rgba(124,140,255,0.5)` : "none",
+          transition: "all 0.3s ease",
+        }} />
         <span style={{
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: 600,
           letterSpacing: "-0.02em",
-          color: BRAND.color.bone,
+          color: BRAND.color.white,
         }}>
           korvid
         </span>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 20, fontSize: 13 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{
             color: connectionState === "connected" ? BRAND.color.sheen : BRAND.color.ember,
-            fontSize: 10,
+            fontSize: 8,
           }}>
             {STATUS_ICON[connectionState === "connected" ? "active" : "error"]}
           </span>
-          <span style={{ color: BRAND.color.slate, fontFamily: BRAND.font.mono, fontSize: 12 }}>
+          <span style={{ color: BRAND.color["text-muted"], fontFamily: BRAND.font.mono, fontSize: 11 }}>
             {connectionState}
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ color: pipelineColor, fontSize: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ color: pipelineColor, fontSize: 8 }}>
             {pipelineState === "processing" ? STATUS_ICON.processing : STATUS_ICON.idle}
           </span>
-          <span style={{ color: BRAND.color.bone, fontFamily: BRAND.font.mono, fontSize: 12 }}>
+          <span style={{ color: BRAND.color.white, fontFamily: BRAND.font.mono, fontSize: 11 }}>
             {pipelineState}
           </span>
         </div>
 
-        <span style={{ color: BRAND.color.slate, fontFamily: BRAND.font.mono, fontSize: 12 }}>
+        <span style={{ color: BRAND.color["text-muted"], fontFamily: BRAND.font.mono, fontSize: 11 }}>
           {uptimeStr}
         </span>
       </div>

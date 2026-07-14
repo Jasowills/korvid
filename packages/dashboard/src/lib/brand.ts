@@ -1,13 +1,16 @@
 export const BRAND = {
   color: {
-    obsidian: "#0E1013",
-    graphite: "#191C20",
-    slate: "#2A2E33",
-    ash: "#6B7076",
-    bone: "#EDEEF0",
+    bg: "#050507",
+    surface: "#0D0F12",
+    "surface-2": "#14171C",
+    border: "#1E2127",
+    white: "#FFFFFF",
+    "text-secondary": "#9CA0A6",
+    "text-muted": "#5A5E64",
     sheen: "#7C8CFF",
-    spark: "#FFB648",
     ember: "#FF6B4A",
+    glass: "rgba(13,15,18,0.6)",
+    "glass-border": "rgba(255,255,255,0.06)",
   },
   font: {
     display: "'Space Grotesk', system-ui, sans-serif",
@@ -38,7 +41,7 @@ export const STATUS_ICON = {
 
 export const STATUS_COLOR = {
   active: BRAND.color.sheen,
-  idle: BRAND.color.slate,
+  idle: BRAND.color["text-muted"],
   processing: BRAND.color.sheen,
   error: BRAND.color.ember,
 } as const;

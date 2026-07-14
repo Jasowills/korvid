@@ -8,17 +8,35 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
+      :root {
+        --bg: #050507;
+        --surface: #0D0F12;
+        --surface-2: #14171C;
+        --border: #1E2127;
+        --white: #FFFFFF;
+        --text: #FFFFFF;
+        --text-secondary: #9CA0A6;
+        --text-muted: #5A5E64;
+        --sheen: #7C8CFF;
+        --sheen-glow: rgba(124,140,255,0.35);
+        --glass: rgba(13,15,18,0.6);
+        --glass-border: rgba(255,255,255,0.06);
+        --font-display: 'Space Grotesk', system-ui, sans-serif;
+        --font-body: 'Space Grotesk', system-ui, sans-serif;
+        --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+      }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body, #root { width: 100%; height: 100%; overflow: hidden; }
-      body { background: #0E1013; color: #EDEEF0; font-family: 'Space Grotesk', system-ui, sans-serif; }
-      :focus-visible { outline: 2px solid #7C8CFF; outline-offset: 2px; }
+      body { background: var(--bg); color: var(--white); font-family: var(--font-body); }
+      :focus-visible { outline: 2px solid var(--sheen); outline-offset: 2px; }
       @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
       @keyframes sheenPulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
       @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #2A2E33; border-radius: 3px; }
-      ::-webkit-scrollbar-thumb:hover { background: #6B7076; }
+      ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
     </style>
   </head>
   <body>

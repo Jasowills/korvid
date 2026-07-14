@@ -42,14 +42,14 @@ export function SuggestionsPanel({ suggestions: propSuggestions }: SuggestionsPa
 
   return (
     <div style={{
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "12px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 11,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginBottom: 10,
@@ -60,18 +60,18 @@ export function SuggestionsPanel({ suggestions: propSuggestions }: SuggestionsPa
       {suggestions.map((s) => (
         <div key={s.id} style={{
           padding: "6px 0",
-          borderBottom: `1px solid ${BRAND.color.obsidian}`,
+          borderBottom: `1px solid ${BRAND.color.bg}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
             <span style={{
               fontFamily: BRAND.font.mono,
               fontSize: 9,
-              color: TYPE_COLORS[s.type] ?? BRAND.color.slate,
+              color: TYPE_COLORS[s.type] ?? BRAND.color.border,
               letterSpacing: "0.05em",
               textTransform: "uppercase",
               padding: "1px 4px",
               borderRadius: 2,
-              background: BRAND.color.obsidian,
+              background: BRAND.color.bg,
             }}>
               {s.type}
             </span>
@@ -79,7 +79,7 @@ export function SuggestionsPanel({ suggestions: propSuggestions }: SuggestionsPa
           <div style={{
             fontFamily: BRAND.font.body,
             fontSize: 12,
-            color: BRAND.color.bone,
+            color: BRAND.color.white,
             lineHeight: 1.4,
           }}>
             {s.message}
@@ -88,7 +88,7 @@ export function SuggestionsPanel({ suggestions: propSuggestions }: SuggestionsPa
             <div style={{
               fontFamily: BRAND.font.mono,
               fontSize: 10,
-              color: BRAND.color.slate,
+              color: BRAND.color.border,
               marginTop: 2,
             }}>
               {s.context}

@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { Canvas } from "@react-three/fiber";
 import { BRAND } from "./lib/brand.js";
 import { useGatewayState } from "./hooks/useGatewayState.js";
+import { Orb } from "./components/Orb.js";
 import { Header } from "./components/Header.js";
 import { BrainView } from "./components/BrainView.js";
 import { ActivityPanel } from "./components/ActivityPanel.js";
@@ -29,15 +31,16 @@ export function App() {
   };
 
   const connectionState = state.connected ? "connected" : "disconnected";
+  const isActive = state.pipelineState !== "idle";
 
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "1fr 340px",
-      gridTemplateRows: "56px 1fr",
+      gridTemplateColumns: "1fr 320px",
+      gridTemplateRows: "48px 1fr",
       height: "100vh",
-      background: BRAND.color.obsidian,
-      color: BRAND.color.bone,
+      background: BRAND.color.bg,
+      color: BRAND.color.white,
       fontFamily: BRAND.font.body,
     }}>
       <Header
@@ -46,26 +49,116 @@ export function App() {
         uptime={state.uptime}
       />
 
-      {/* Left column: Brain + Timeline */}
-      <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <BrainView
-          memoryNodes={state.memoryNodes}
-          pipelineState={state.pipelineState}
-          streamingText={state.streamingText ?? ""}
-          partialTranscript={state.partialTranscript ?? ""}
-          connectionState={connectionState}
-          activeNodes={state.activeNodes}
-          onNodeClick={setSelectedNodeId}
-        />
+      {/* Left column: Orb + Brain + Timeline */}
+      <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
+        {/* Orb + Memory Graph overlay */}
+        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+          {/* Orb centered */}
+          <div style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 200,
+            height: 200,
+            zIndex: 2,
+            pointerEvents: "none",
+          }}>
+            <Canvas camera={{ position: [0, 0, 2], fov: 45 }}>
+              <Orb active={isActive} />
+            </Canvas>
+          </div>
+
+          {/* Memory graph behind Orb */}
+          <BrainView
+            memoryNodes={state.memoryNodes}
+            pipelineState={state.pipelineState}
+            streamingText={state.streamingText ?? ""}
+            partialTranscript={state.partialTranscript ?? ""}
+            connectionState={connectionState}
+            activeNodes={state.activeNodes}
+            onNodeClick={setSelectedNodeId}
+          />
+
+          {/* Pipeline state label */}
+          {state.pipelineState !== "idle" && (
+            <div style={{
+              position: "absolute",
+              bottom: 20,
+              left: "50%",
+              transform: "translateX(-50%)",
+              fontFamily: BRAND.font.mono,
+              fontSize: 11,
+              color: BRAND.color.sheen,
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              animation: "sheenPulse 2s ease-in-out infinite",
+              textShadow: "0 0 20px rgba(124,140,255,0.4)",
+            }}>
+              {state.pipelineState === "processing" ? "thinking" : state.pipelineState}
+            </div>
+          )}
+
+          {/* Partial transcript */}
+          {state.partialTranscript && (
+            <div style={{
+              position: "absolute",
+              bottom: 48,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: "rgba(5,5,7,0.8)",
+              backdropFilter: "blur(12px)",
+              border: `1px solid ${BRAND.color["glass-border"]}`,
+              borderRadius: 8,
+              padding: "6px 14px",
+              fontFamily: BRAND.font.mono,
+              fontSize: 12,
+              color: BRAND.color.sheen,
+              maxWidth: "80%",
+              textAlign: "center",
+              animation: "fadeIn 0.2s ease-out",
+            }}>
+              <span style={{ opacity: 0.4, marginRight: 6 }}>hearing:</span>
+              {state.partialTranscript}
+              <span style={{ animation: "blink 1s infinite", marginLeft: 2 }}>|</span>
+            </div>
+          )}
+
+          {/* Streaming response */}
+          {state.streamingText && (
+            <div style={{
+              position: "absolute",
+              bottom: 80,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: "rgba(5,5,7,0.8)",
+              backdropFilter: "blur(12px)",
+              border: `1px solid rgba(124,140,255,0.15)`,
+              borderRadius: 8,
+              padding: "6px 14px",
+              fontFamily: BRAND.font.body,
+              fontSize: 12,
+              color: BRAND.color.white,
+              maxWidth: "80%",
+              textAlign: "center",
+              animation: "fadeIn 0.2s ease-out",
+            }}>
+              {state.streamingText}
+              <span style={{ animation: "blink 1s infinite", marginLeft: 2, color: BRAND.color.sheen }}>|</span>
+            </div>
+          )}
+        </div>
+
         <DelegationTimeline events={state.delegationEvents} />
       </div>
 
-      {/* Right sidebar */}
+      {/* Right sidebar — glassmorphic panels */}
       <div style={{
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        borderLeft: `1px solid ${BRAND.color.slate}`,
+        borderLeft: `1px solid ${BRAND.color.border}`,
+        background: "rgba(13,15,18,0.3)",
       }}>
         <ActivityPanel
           activityLog={state.activityLog}

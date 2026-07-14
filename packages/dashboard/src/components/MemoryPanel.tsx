@@ -18,14 +18,14 @@ const NODE_COLORS: Record<string, string> = {
 export function MemoryPanel({ nodes, stats, onConsolidate }: MemoryPanelProps) {
   return (
     <div style={{
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "12px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 11,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginBottom: 10,
@@ -46,13 +46,13 @@ export function MemoryPanel({ nodes, stats, onConsolidate }: MemoryPanelProps) {
           onClick={onConsolidate}
           style={{
             width: "100%",
-            background: BRAND.color.obsidian,
-            border: `1px solid ${BRAND.color.slate}`,
+            background: BRAND.color.bg,
+            border: `1px solid ${BRAND.color.border}`,
             borderRadius: 4,
             padding: "6px 0",
             fontFamily: BRAND.font.mono,
             fontSize: 11,
-            color: BRAND.color.bone,
+            color: BRAND.color.white,
             cursor: "pointer",
             marginBottom: 10,
           }}
@@ -69,19 +69,19 @@ export function MemoryPanel({ nodes, stats, onConsolidate }: MemoryPanelProps) {
             alignItems: "center",
             gap: 6,
             padding: "3px 0",
-            borderBottom: `1px solid ${BRAND.color.obsidian}`,
+            borderBottom: `1px solid ${BRAND.color.bg}`,
           }}>
             <span style={{
               width: 6,
               height: 6,
               borderRadius: "50%",
-              background: NODE_COLORS[node.type] ?? BRAND.color.slate,
+              background: NODE_COLORS[node.type] ?? BRAND.color.border,
               flexShrink: 0,
             }} />
             <span style={{
               fontFamily: BRAND.font.mono,
               fontSize: 11,
-              color: BRAND.color.bone,
+              color: BRAND.color.white,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -98,15 +98,15 @@ export function MemoryPanel({ nodes, stats, onConsolidate }: MemoryPanelProps) {
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
     <div style={{
-      background: BRAND.color.obsidian,
+      background: BRAND.color.bg,
       borderRadius: 4,
       padding: "6px 8px",
       textAlign: "center",
     }}>
-      <div style={{ fontFamily: BRAND.font.mono, fontSize: 14, fontWeight: 500, color: BRAND.color.bone }}>
+      <div style={{ fontFamily: BRAND.font.mono, fontSize: 14, fontWeight: 500, color: BRAND.color.white }}>
         {value}
       </div>
-      <div style={{ fontFamily: BRAND.font.mono, fontSize: 9, color: BRAND.color.slate, letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>
+      <div style={{ fontFamily: BRAND.font.mono, fontSize: 9, color: BRAND.color.border, letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>
         {label}
       </div>
     </div>

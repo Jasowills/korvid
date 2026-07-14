@@ -33,14 +33,14 @@ export function DelegationTimeline({ events }: DelegationTimelineProps) {
     <div style={{
       maxHeight: 140,
       overflow: "auto",
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "10px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 11,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginBottom: 8,
@@ -56,9 +56,9 @@ export function DelegationTimeline({ events }: DelegationTimelineProps) {
               minWidth: 100,
               maxWidth: 160,
               padding: "6px 8px",
-              background: BRAND.color.obsidian,
+              background: BRAND.color.bg,
               borderRadius: 4,
-              borderLeft: `2px solid ${STATUS_BORDER[event.status] ?? BRAND.color.slate}`,
+              borderLeft: `2px solid ${STATUS_BORDER[event.status] ?? BRAND.color.border}`,
               flexShrink: 0,
             }}
           >
@@ -66,14 +66,14 @@ export function DelegationTimeline({ events }: DelegationTimelineProps) {
               <span style={{
                 fontFamily: BRAND.font.mono,
                 fontSize: 10,
-                color: STATUS_BORDER[event.status] ?? BRAND.color.slate,
+                color: STATUS_BORDER[event.status] ?? BRAND.color.border,
               }}>
                 {TYPE_ICONS[event.type] ?? "·"}
               </span>
               <span style={{
                 fontFamily: BRAND.font.mono,
                 fontSize: 9,
-                color: BRAND.color.slate,
+                color: BRAND.color.border,
                 letterSpacing: "0.05em",
                 textTransform: "uppercase",
               }}>
@@ -83,7 +83,7 @@ export function DelegationTimeline({ events }: DelegationTimelineProps) {
             <div style={{
               fontFamily: BRAND.font.mono,
               fontSize: 10,
-              color: BRAND.color.bone,
+              color: BRAND.color.white,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -93,7 +93,7 @@ export function DelegationTimeline({ events }: DelegationTimelineProps) {
             <div style={{
               fontFamily: BRAND.font.mono,
               fontSize: 9,
-              color: BRAND.color.slate,
+              color: BRAND.color.border,
               marginTop: 2,
             }}>
               {new Date(event.timestamp).toLocaleTimeString()}

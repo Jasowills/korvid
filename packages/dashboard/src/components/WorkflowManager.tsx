@@ -26,14 +26,14 @@ export function WorkflowManager(_props: WorkflowManagerProps) {
 
   return (
     <div style={{
-      background: BRAND.color.graphite,
-      borderTop: `1px solid ${BRAND.color.slate}`,
+      background: "rgba(13,15,18,0.3)",
+      borderTop: `1px solid ${BRAND.color.border}`,
       padding: "12px 16px",
     }}>
       <div style={{
         fontFamily: BRAND.font.mono,
         fontSize: 11,
-        color: BRAND.color.slate,
+        color: BRAND.color.border,
         letterSpacing: "0.05em",
         textTransform: "uppercase",
         marginBottom: 10,
@@ -43,10 +43,10 @@ export function WorkflowManager(_props: WorkflowManagerProps) {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.bone }}>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 11, color: BRAND.color.white }}>
             {status.enabled ? "enabled" : "disabled"}
           </div>
-          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.slate, marginTop: 2 }}>
+          <div style={{ fontFamily: BRAND.font.mono, fontSize: 10, color: BRAND.color.border, marginTop: 2 }}>
             max concurrent: {status.maxConcurrent}
           </div>
         </div>
@@ -54,7 +54,7 @@ export function WorkflowManager(_props: WorkflowManagerProps) {
           width: 8,
           height: 8,
           borderRadius: "50%",
-          background: status.enabled ? "#48BB78" : BRAND.color.slate,
+          background: status.enabled ? "#48BB78" : BRAND.color.border,
         }} />
       </div>
     </div>
