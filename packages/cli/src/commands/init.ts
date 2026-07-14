@@ -1,8 +1,11 @@
 import { Command } from "commander";
 import * as p from "@clack/prompts";
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { KorvidConfigSchema, type KorvidConfig } from "@korvid/shared";
-import { writeConfig, configExists, getConfigPath } from "@korvid/shared/config-file.js";
+import { writeConfig, loadConfig, configExists, getConfigPath } from "@korvid/shared/config-file.js";
 
 function cancelGuard<T>(value: T | symbol): T | never {
   if (p.isCancel(value)) {
@@ -12,58 +15,281 @@ function cancelGuard<T>(value: T | symbol): T | never {
   return value as T;
 }
 
+function checkInstalled(cmd: string, args: string[]): boolean {
+  try {
+    execFileSync(cmd, args, { timeout: 5000, stdio: "pipe" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function platformHint(tool: string, brewPkg?: string): string {
+  const pl = process.platform;
+  if (pl === "darwin") return `brew install ${brewPkg ?? tool}`;
+  if (pl === "win32") return `choco install ${brewPkg ?? tool}`;
+  return `apt install ${brewPkg ?? tool}`;
+}
+
+// ── Env var auto-detection ───────────────────────────────────────
+const ENV_KEY_MAP: Record<string, string> = {
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+  google: "GOOGLE_API_KEY",
+  groq: "GROQ_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
+  deepgram: "DEEPGRAM_API_KEY",
+  elevenlabs: "ELEVENLABS_API_KEY",
+  cartesia: "CARTESIA_API_KEY",
+};
+
+function detectEnvKey(provider: string): string | undefined {
+  const envVar = ENV_KEY_MAP[provider];
+  if (!envVar) return undefined;
+  const val = process.env[envVar];
+  return val && val.length > 0 ? val : undefined;
+}
+
+// ── Ollama model catalog ─────────────────────────────────────────
+function getOllamaModels(): string[] {
+  try {
+    const res = execFileSync("ollama", ["list"], {
+      timeout: 5000,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return res
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((l) => l.split(/\s+/)[0])
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+// ── Provider defaults ────────────────────────────────────────────
+const PROVIDER_DEFAULTS: Record<string, string> = {
+  anthropic: "claude-sonnet-4-6",
+  openai: "gpt-4o",
+  google: "gemini-2.5-flash",
+  groq: "llama-3.1-8b-instant",
+  openrouter: "openrouter/auto",
+};
+
+const FAST_MODEL_DEFAULTS: Record<string, string> = {
+  groq: "llama-3.1-8b-instant",
+  ollama: "llama3.2",
+  google: "gemini-2.5-flash",
+};
+
+// ── Init command ─────────────────────────────────────────────────
 export const initCommand = new Command("init")
   .description("Initialize Korvid configuration")
   .option("--defaults", "Use all default settings (non-interactive)")
   .action(async (opts) => {
     p.intro("Korvid");
 
-    if (configExists() && !opts.defaults) {
-      const overwrite = cancelGuard(
-        await p.confirm({ message: `Config exists at ${getConfigPath()}. Overwrite?`, initialValue: false })
+    const existingConfig = configExists() ? loadConfig() : null;
+
+    // ── Re-run handling ─────────────────────────────────────────
+    if (existingConfig && !opts.defaults) {
+      const action = cancelGuard(
+        await p.select({
+          message: "Config already exists. What would you like to do?",
+          options: [
+            { value: "keep", label: "Keep current config", hint: "Exit without changes" },
+            { value: "verify", label: "Verify & repair", hint: "Test current config, fix issues" },
+            { value: "advanced", label: "Reconfigure", hint: "Walk through all settings again" },
+            { value: "overwrite", label: "Start fresh", hint: "Delete config and start over" },
+          ],
+          initialValue: "verify",
+        })
       );
-      if (!overwrite) {
-        p.cancel("aborted.");
+
+      if (action === "keep") {
+        p.outro("Config unchanged.");
         return;
+      }
+
+      if (action === "verify") {
+        await verifyAndRepair(existingConfig);
+        return;
+      }
+
+      if (action === "overwrite") {
+        const confirm = cancelGuard(
+          await p.confirm({ message: "This will delete your current config. Continue?", initialValue: false })
+        );
+        if (!confirm) {
+          p.cancel("aborted.");
+          return;
+        }
       }
     }
 
+    // ── Flow choice ─────────────────────────────────────────────
     let config: KorvidConfig;
 
     if (opts.defaults) {
       config = KorvidConfigSchema.parse({});
       p.log.info("Using all defaults (Ollama local, manual wake word, local STT/TTS).");
     } else {
-      config = await runWizard();
+      const mode = cancelGuard(
+        await p.select({
+          message: "How would you like to set up?",
+          options: [
+            { value: "quick", label: "Quick setup", hint: "Sensible defaults, minimal prompts" },
+            { value: "advanced", label: "Advanced", hint: "Configure every setting" },
+          ],
+          initialValue: "quick",
+        })
+      );
+
+      if (mode === "quick") {
+        config = await runQuickStart();
+      } else {
+        config = await runAdvancedWizard();
+      }
     }
 
+    // ── Write config ────────────────────────────────────────────
     const s = p.spinner();
     s.start("Writing config");
     writeConfig(config);
     const path = getConfigPath();
     s.stop(`Config written to ${path}`);
 
-    p.log.step("Checking dependencies...");
+    // ── Dependency checks ───────────────────────────────────────
     await runSystemChecks(config);
 
-    p.note(
-      [
-        "1. Start Ollama:       ollama serve",
-        "2. Pull a model:       ollama pull llama3.2",
-        "3. Start Korvid:       korvid start",
-        "4. Diagnostics:        korvid doctor",
-      ].join("\n"),
-      "Next steps"
+    // ── Messaging setup ─────────────────────────────────────────
+    await offerMessagingSetup(config);
+
+    // ── Closing ─────────────────────────────────────────────────
+    printNextSteps(config);
+
+    const startChoice = cancelGuard(
+      await p.select({
+        message: "How would you like to start?",
+        options: [
+          { value: "terminal", label: "Terminal", hint: "korvid voice — start talking" },
+          { value: "browser", label: "Browser", hint: "Open the dashboard" },
+          { value: "later", label: "Decide later", hint: "Exit for now" },
+        ],
+        initialValue: "terminal",
+      })
     );
 
-    p.outro("Done. Korvid is configured.");
+    if (startChoice === "terminal") {
+      p.outro("Run: korvid voice");
+    } else if (startChoice === "browser") {
+      p.outro(`Dashboard: http://localhost:${config.gateway.port}`);
+    } else {
+      p.outro("Done. Korvid is configured.");
+    }
   });
 
-async function runWizard(): Promise<KorvidConfig> {
+// ── Quick Start ──────────────────────────────────────────────────
+async function runQuickStart(): Promise<KorvidConfig> {
+  // Detect any existing API keys from env
+  const detectedKeys: string[] = [];
+  for (const [provider, envVar] of Object.entries(ENV_KEY_MAP)) {
+    if (process.env[envVar]) detectedKeys.push(provider);
+  }
+
+  // Detect Ollama
+  const hasOllama = checkInstalled("ollama", ["--version"]);
+
+  // ── Reasoning model (the one thing we can't fully default) ────
+  const reasoningProvider = cancelGuard(
+    await p.select({
+      message: "Reasoning model provider?",
+      options: [
+        { value: "ollama", label: "Ollama", hint: hasOllama ? "Local, free — detected on your system" : "Local, free — requires install" },
+        { value: "anthropic", label: "Anthropic", hint: detectedKeys.includes("anthropic") ? "Claude — API key detected" : "Claude — requires API key" },
+        { value: "openai", label: "OpenAI", hint: detectedKeys.includes("openai") ? "GPT — API key detected" : "GPT — requires API key" },
+        { value: "google", label: "Google Gemini", hint: detectedKeys.includes("google") ? "Gemini — API key detected" : "Gemini — requires API key" },
+        { value: "groq", label: "Groq", hint: detectedKeys.includes("groq") ? "Fast inference — API key detected" : "Fast inference — requires API key" },
+        { value: "openrouter", label: "OpenRouter", hint: "Multi-provider — auto-routes to best model" },
+      ],
+      initialValue: hasOllama ? "ollama" : detectedKeys[0] || "ollama",
+    })
+  );
+
+  let reasoningModel: string;
+  let reasoningApiKey: string | undefined;
+
+  if (reasoningProvider === "ollama") {
+    const models = getOllamaModels();
+    if (models.length > 0) {
+      reasoningModel = cancelGuard(
+        await p.select({
+          message: "Which Ollama model?",
+          options: models.map((m) => ({
+            value: m,
+            label: m,
+            hint: m.includes("llama3.2") ? "recommended" : "",
+          })),
+          initialValue: models.find((m) => m.includes("llama3.2")) || models[0],
+        })
+      );
+    } else {
+      reasoningModel = "llama3.2";
+      p.log.warn("No Ollama models found. Pull one: ollama pull llama3.2");
+    }
+    reasoningApiKey = undefined;
+  } else if (reasoningProvider === "openrouter") {
+    reasoningModel = "openrouter/auto";
+    const envKey = detectEnvKey(reasoningProvider);
+    if (envKey) {
+      reasoningApiKey = envKey;
+      p.log.info(`Using API key from ${ENV_KEY_MAP[reasoningProvider]}`);
+    } else {
+      reasoningApiKey = cancelGuard(
+        await p.password({ message: "OpenRouter API key:", mask: "*" })
+      );
+    }
+  } else {
+    reasoningModel = PROVIDER_DEFAULTS[reasoningProvider];
+    const envKey = detectEnvKey(reasoningProvider);
+    if (envKey) {
+      reasoningApiKey = envKey;
+      p.log.info(`Using API key from ${ENV_KEY_MAP[reasoningProvider]}`);
+    } else {
+      reasoningApiKey = cancelGuard(
+        await p.password({ message: `API key for ${reasoningProvider}:`, mask: "*" })
+      );
+    }
+  }
+
+  // ── Fast model (default: same as reasoning or Groq) ───────────
+  const fastProvider = detectedKeys.includes("groq") ? "groq" : reasoningProvider;
+  const fastModel = FAST_MODEL_DEFAULTS[fastProvider] || reasoningModel;
+  const fastApiKey = fastProvider === reasoningProvider ? reasoningApiKey : detectEnvKey(fastProvider);
+
+  // ── Assemble with defaults for everything else ────────────────
+  return KorvidConfigSchema.parse({
+    models: {
+      reasoning: { provider: reasoningProvider, model: reasoningModel, apiKey: reasoningApiKey },
+      fast: { provider: fastProvider, model: fastModel, apiKey: fastApiKey },
+    },
+    voice: {
+      wakeWord: { engine: "manual" },
+      stt: { provider: "local-whisper" },
+      tts: { provider: "local" },
+    },
+    gateway: { port: 3847 },
+  });
+}
+
+// ── Advanced Wizard ──────────────────────────────────────────────
+async function runAdvancedWizard(): Promise<KorvidConfig> {
   // ── Model Provider ─────────────────────────────────────────────
   const reasoningProvider = cancelGuard(
     await p.select({
-      message: "Which reasoning model provider?",
+      message: "Reasoning model provider?",
       options: [
         { value: "ollama", label: "Ollama", hint: "Local, free — recommended for dev" },
         { value: "anthropic", label: "Anthropic", hint: "Claude models — requires API key" },
@@ -76,44 +302,66 @@ async function runWizard(): Promise<KorvidConfig> {
     })
   );
 
-  let reasoningModel = "llama3.2";
+  let reasoningModel: string;
   let reasoningApiKey: string | undefined;
 
   if (reasoningProvider === "ollama") {
+    const models = getOllamaModels();
+    if (models.length > 0) {
+      reasoningModel = cancelGuard(
+        await p.select({
+          message: "Which Ollama model?",
+          options: models.map((m) => ({
+            value: m,
+            label: m,
+            hint: m.includes("llama3.2") ? "recommended" : "",
+          })),
+          initialValue: models.find((m) => m.includes("llama3.2")) || models[0],
+        })
+      );
+    } else {
+      reasoningModel = cancelGuard(
+        await p.text({ message: "Ollama model name:", defaultValue: "llama3.2" })
+      );
+    }
+    reasoningApiKey = undefined;
+  } else if (reasoningProvider === "openrouter") {
     reasoningModel = cancelGuard(
       await p.text({
-        message: "Ollama model name:",
-        defaultValue: "llama3.2",
+        message: "Model (use openrouter/auto for auto-routing):",
+        defaultValue: "openrouter/auto",
       })
     );
+    const envKey = detectEnvKey(reasoningProvider);
+    if (envKey) {
+      const useEnv = cancelGuard(
+        await p.confirm({ message: `Use API key from ${ENV_KEY_MAP[reasoningProvider]}?`, initialValue: true })
+      );
+      reasoningApiKey = useEnv ? envKey : cancelGuard(await p.password({ message: "OpenRouter API key:", mask: "*" }));
+    } else {
+      reasoningApiKey = cancelGuard(await p.password({ message: "OpenRouter API key:", mask: "*" }));
+    }
   } else {
-    const model = cancelGuard(
+    reasoningModel = cancelGuard(
       await p.text({
         message: "Model name:",
-        defaultValue:
-          reasoningProvider === "anthropic"
-            ? "claude-sonnet-4-6"
-            : reasoningProvider === "openai"
-              ? "gpt-4o"
-              : reasoningProvider === "google"
-                ? "gemini-2.5-flash"
-                : reasoningProvider === "groq"
-                  ? "llama-3.1-8b-instant"
-                  : "anthropic/claude-sonnet-4-6",
+        defaultValue: PROVIDER_DEFAULTS[reasoningProvider],
       })
     );
-    reasoningModel = model;
-    reasoningApiKey = cancelGuard(
-      await p.password({ message: `API key for ${reasoningProvider}:`, mask: "*" })
-    );
+    const envKey = detectEnvKey(reasoningProvider);
+    if (envKey) {
+      const useEnv = cancelGuard(
+        await p.confirm({ message: `Use API key from ${ENV_KEY_MAP[reasoningProvider]}?`, initialValue: true })
+      );
+      reasoningApiKey = useEnv ? envKey : cancelGuard(await p.password({ message: `API key for ${reasoningProvider}:`, mask: "*" }));
+    } else {
+      reasoningApiKey = cancelGuard(await p.password({ message: `API key for ${reasoningProvider}:`, mask: "*" }));
+    }
   }
 
   // ── Fast Model ─────────────────────────────────────────────────
   const useFastModel = cancelGuard(
-    await p.confirm({
-      message: "Configure a separate fast/routing model?",
-      initialValue: reasoningProvider === "ollama",
-    })
+    await p.confirm({ message: "Configure a separate fast/routing model?", initialValue: true })
   );
 
   let fastProvider = reasoningProvider;
@@ -134,22 +382,33 @@ async function runWizard(): Promise<KorvidConfig> {
       })
     );
 
-    if (fastProvider !== "ollama") {
-      const model = cancelGuard(
-        await p.text({ message: "Fast model name:", defaultValue: "llama-3.1-8b-instant" })
-      );
-      fastModel = model;
-      const key = cancelGuard(
-        await p.password({
-          message: `API key for ${fastProvider} (Enter to reuse reasoning key):`,
-          mask: "*",
-        })
-      );
-      fastApiKey = key || reasoningApiKey;
+    if (fastProvider === "ollama") {
+      const models = getOllamaModels();
+      if (models.length > 0) {
+        fastModel = cancelGuard(
+          await p.select({
+            message: "Which Ollama model for fast?",
+            options: models.map((m) => ({ value: m, label: m })),
+            initialValue: models.find((m) => m.includes("llama3.2")) || models[0],
+          })
+        );
+      } else {
+        fastModel = cancelGuard(await p.text({ message: "Ollama model name:", defaultValue: "llama3.2" }));
+      }
     } else {
       fastModel = cancelGuard(
-        await p.text({ message: "Ollama model name:", defaultValue: "llama3.2" })
+        await p.text({ message: "Fast model name:", defaultValue: FAST_MODEL_DEFAULTS[fastProvider] || "" })
       );
+      const envKey = detectEnvKey(fastProvider);
+      if (envKey) {
+        const useEnv = cancelGuard(
+          await p.confirm({ message: `Use API key from ${ENV_KEY_MAP[fastProvider]}?`, initialValue: true })
+        );
+        fastApiKey = useEnv ? envKey : cancelGuard(await p.password({ message: `API key for ${fastProvider}:`, mask: "*" }));
+      } else {
+        fastApiKey = cancelGuard(await p.password({ message: `API key for ${fastProvider} (Enter to reuse reasoning key):`, mask: "*" }));
+        fastApiKey = fastApiKey || reasoningApiKey;
+      }
     }
   }
 
@@ -181,9 +440,15 @@ async function runWizard(): Promise<KorvidConfig> {
 
   let sttApiKey: string | undefined;
   if (sttProvider !== "local-whisper") {
-    sttApiKey = cancelGuard(
-      await p.password({ message: `API key for ${sttProvider} STT:`, mask: "*" })
-    );
+    const envKey = detectEnvKey(sttProvider);
+    if (envKey) {
+      const useEnv = cancelGuard(
+        await p.confirm({ message: `Use API key from ${ENV_KEY_MAP[sttProvider]}?`, initialValue: true })
+      );
+      sttApiKey = useEnv ? envKey : cancelGuard(await p.password({ message: `API key for ${sttProvider} STT:`, mask: "*" }));
+    } else {
+      sttApiKey = cancelGuard(await p.password({ message: `API key for ${sttProvider} STT:`, mask: "*" }));
+    }
   }
 
   // ── TTS ────────────────────────────────────────────────────────
@@ -202,23 +467,33 @@ async function runWizard(): Promise<KorvidConfig> {
   let ttsApiKey: string | undefined;
   let ttsVoiceId: string | undefined;
   if (ttsProvider !== "local") {
-    ttsApiKey = cancelGuard(
-      await p.password({ message: `API key for ${ttsProvider} TTS:`, mask: "*" })
-    );
+    const envKey = detectEnvKey(ttsProvider);
+    if (envKey) {
+      const useEnv = cancelGuard(
+        await p.confirm({ message: `Use API key from ${ENV_KEY_MAP[ttsProvider]}?`, initialValue: true })
+      );
+      ttsApiKey = useEnv ? envKey : cancelGuard(await p.password({ message: `API key for ${ttsProvider} TTS:`, mask: "*" }));
+    } else {
+      ttsApiKey = cancelGuard(await p.password({ message: `API key for ${ttsProvider} TTS:`, mask: "*" }));
+    }
     const voiceId = cancelGuard(
       await p.text({ message: "Voice ID (blank for default):", defaultValue: "" })
     );
     ttsVoiceId = voiceId || undefined;
   }
 
-  // ── Port ───────────────────────────────────────────────────────
+  // ── Gateway ────────────────────────────────────────────────────
   const portStr = cancelGuard(
     await p.text({ message: "Gateway port:", defaultValue: "3847" })
   );
   const port = parseInt(portStr, 10) || 3847;
 
+  const authToken = cancelGuard(
+    await p.confirm({ message: "Enable gateway auth token?", initialValue: true })
+  );
+
   // ── Assemble ───────────────────────────────────────────────────
-  return KorvidConfigSchema.parse({
+  const config: KorvidConfig = KorvidConfigSchema.parse({
     models: {
       reasoning: { provider: reasoningProvider, model: reasoningModel, apiKey: reasoningApiKey },
       fast: { provider: fastProvider, model: fastModel, apiKey: fastApiKey },
@@ -228,26 +503,136 @@ async function runWizard(): Promise<KorvidConfig> {
       stt: { provider: sttProvider, apiKey: sttApiKey },
       tts: { provider: ttsProvider, apiKey: ttsApiKey, voiceId: ttsVoiceId },
     },
-    gateway: { port },
+    gateway: {
+      port,
+      auth: authToken ? { token: generateToken() } : {},
+    },
   });
+
+  return config;
 }
 
-function checkInstalled(cmd: string, args: string[]): boolean {
-  try {
-    execFileSync(cmd, args, { timeout: 5000, stdio: "pipe" });
-    return true;
-  } catch {
-    return false;
+// ── Verify & Repair ──────────────────────────────────────────────
+async function verifyAndRepair(config: KorvidConfig): Promise<void> {
+  p.log.step("Verifying current configuration...");
+
+  const issues: string[] = [];
+
+  // Check reasoning model
+  const s = p.spinner();
+  s.start("Testing reasoning model connection");
+  if (config.models.reasoning.provider === "ollama") {
+    try {
+      execFileSync("ollama", ["list"], { timeout: 5000, stdio: "pipe" });
+      s.stop("Ollama reachable");
+    } catch {
+      s.stop("Ollama not reachable");
+      issues.push("Ollama is not running. Start it: ollama serve");
+    }
+  } else {
+    const hasKey = config.models.reasoning.apiKey || detectEnvKey(config.models.reasoning.provider);
+    if (hasKey) {
+      s.stop(`API key configured for ${config.models.reasoning.provider}`);
+    } else {
+      s.stop(`No API key for ${config.models.reasoning.provider}`);
+      issues.push(`Missing API key for ${config.models.reasoning.provider}. Run: korvid init`);
+    }
+  }
+
+  // Check voice deps
+  await runSystemChecks(config);
+
+  if (issues.length > 0) {
+    p.note(issues.join("\n"), "Issues found");
+    const fix = cancelGuard(
+      await p.confirm({ message: "Run full reconfiguration?", initialValue: true })
+    );
+    if (fix) {
+      const newConfig = await runAdvancedWizard();
+      const s2 = p.spinner();
+      s2.start("Writing config");
+      writeConfig(newConfig);
+      s2.stop("Config updated");
+    }
+  } else {
+    p.outro("Configuration looks good.");
   }
 }
 
-function platformHint(tool: string, brewPkg?: string): string {
-  const p2 = process.platform;
-  if (p2 === "darwin") return `brew install ${brewPkg ?? tool}`;
-  if (p2 === "win32") return `choco install ${brewPkg ?? tool}`;
-  return `apt install ${brewPkg ?? tool}`;
+// ── Messaging Setup ──────────────────────────────────────────────
+async function offerMessagingSetup(config: KorvidConfig): Promise<void> {
+  const setup = cancelGuard(
+    await p.confirm({
+      message: "Set up WhatsApp or Telegram now?",
+      initialValue: false,
+    })
+  );
+
+  if (!setup) {
+    p.log.info("Skipped. Run: korvid messaging");
+    return;
+  }
+
+  const channel = cancelGuard(
+    await p.select({
+      message: "Which channel?",
+      options: [
+        { value: "whatsapp", label: "WhatsApp", hint: "Business API or WhatsApp Web" },
+        { value: "telegram", label: "Telegram", hint: "Bot token required" },
+      ],
+    })
+  );
+
+  const s = p.spinner();
+
+  if (channel === "telegram") {
+    const botToken = cancelGuard(await p.password({ message: "Telegram bot token:", mask: "*" }));
+    s.start("Validating Telegram bot token");
+    // Basic format check
+    if (/^\d+:[A-Za-z0-9_-]+$/.test(botToken)) {
+      s.stop("Token format valid");
+      config.messaging.telegram = { enabled: true, botToken, allowFrom: [] };
+      p.log.info("Telegram configured. Send /start to your bot to begin.");
+    } else {
+      s.stop("Invalid token format");
+      p.log.warn("Token format looks wrong. You can reconfigure later: korvid messaging");
+    }
+  } else {
+    const botToken = cancelGuard(await p.password({ message: "WhatsApp Business API token:", mask: "*" }));
+    s.start("Validating WhatsApp credentials");
+    if (botToken.length > 10) {
+      s.stop("Credentials accepted");
+      config.messaging.whatsapp = { enabled: true, botToken, allowFrom: [] };
+      p.log.info("WhatsApp configured.");
+    } else {
+      s.stop("Invalid credentials");
+      p.log.warn("Reconfigure later: korvid messaging");
+    }
+  }
 }
 
+// ── Next Steps ───────────────────────────────────────────────────
+function printNextSteps(config: KorvidConfig): void {
+  const steps: string[] = [];
+
+  if (config.models.reasoning.provider === "ollama") {
+    steps.push("1. Start Ollama:     ollama serve");
+    steps.push("2. Start Korvid:     korvid voice");
+  } else {
+    steps.push("1. Start Korvid:     korvid voice");
+  }
+
+  steps.push("");
+  steps.push("Diagnostics:  korvid doctor");
+  steps.push("Models:        korvid models list");
+  if (!config.messaging.whatsapp?.enabled && !config.messaging.telegram?.enabled) {
+    steps.push("Messaging:     korvid messaging");
+  }
+
+  p.note(steps.join("\n"), "Next steps");
+}
+
+// ── System Checks ────────────────────────────────────────────────
 async function runSystemChecks(config: KorvidConfig) {
   const checks: { name: string; ok: boolean; hint?: string }[] = [];
 
@@ -276,13 +661,22 @@ async function runSystemChecks(config: KorvidConfig) {
   for (const check of checks) {
     const s = p.spinner();
     s.start(`Checking ${check.name}`);
-    // Simulate a brief check delay so spinner is visible
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 100));
     if (check.ok) {
       s.stop(`${check.name} found`);
     } else {
       s.stop(`${check.name} missing`);
-      p.log.warn(`${check.hint ? `${check.hint}` : `Install ${check.name}`}`);
+      if (check.hint) p.log.warn(check.hint);
     }
   }
+}
+
+// ── Token generator ──────────────────────────────────────────────
+function generateToken(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
