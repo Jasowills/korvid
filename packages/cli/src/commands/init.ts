@@ -149,7 +149,11 @@ export const initCommand = new Command("init")
     if (startChoice === "terminal") {
       p.outro("Run: korvid voice");
     } else if (startChoice === "browser") {
-      p.outro(`Dashboard: http://localhost:${config.gateway.port}`);
+      p.note(
+        `  1. Start the gateway:  korvid start\n  2. Open in browser:    http://localhost:${config.gateway.port}\n\n  The gateway must be running for the dashboard to work.`,
+        "Dashboard"
+      );
+      p.outro("Run: korvid start");
     } else {
       p.outro("Done. Korvid is configured.");
     }
