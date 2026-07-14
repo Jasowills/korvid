@@ -58,7 +58,7 @@ export function createMemoryStore(opts?: { dataDir?: string }): MemoryStore {
       const q = query.toLowerCase();
       return Array.from(core.values())
         .filter((e) => e.key.toLowerCase().includes(q) || e.value.toLowerCase().includes(q))
-        .sort((a, b) => cosineSimilarity(query, a.value) - cosineSimilarity(query, b.value) || b.accessCount - a.accessCount);
+        .sort((a, b) => cosineSimilarity(query, b.value) - cosineSimilarity(query, a.value) || b.accessCount - a.accessCount);
     },
 
     addEpisodic(summary: string, details: string, tags: string[] = [], importance: number = 0.5): EpisodicMemoryEntry {

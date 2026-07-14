@@ -1,0 +1,6 @@
+{
+  "installCommand": "corepack enable && pnpm install --filter @korvid/site",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "site/dist",
+  "framework": null
+}

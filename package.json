@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Korvid — a personal Jarvis-style AI assistant",
+  "packageManager": "pnpm@11.12.0",
   "scripts": {
     "dev": "pnpm --filter @korvid/gateway dev",
     "start": "pnpm --filter @korvid/gateway start",

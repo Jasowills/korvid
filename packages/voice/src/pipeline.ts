@@ -423,7 +423,13 @@ export function createVoicePipeline(deps: {
             // Handle tool calls
             for (const toolCall of chunk.toolCalls) {
               console.log(`[voice] Tool call: ${toolCall.function.name}`);
-              const args = JSON.parse(toolCall.function.arguments);
+              let args: Record<string, unknown>;
+              try {
+                args = JSON.parse(toolCall.function.arguments);
+              } catch {
+                console.error(`[voice] Failed to parse tool arguments for ${toolCall.function.name}`);
+                continue;
+              }
               const result = await deps.tools.execute(toolCall.function.name, args);
               history.push({ role: "tool", content: result, name: toolCall.function.name });
               // Re-run reasoning with tool result
@@ -444,7 +450,13 @@ export function createVoicePipeline(deps: {
           let toolResponse = result.text;
           for (const toolCall of result.toolCalls) {
             console.log(`[voice] Tool call: ${toolCall.function.name}`);
-            const args = JSON.parse(toolCall.function.arguments);
+            let args: Record<string, unknown>;
+            try {
+              args = JSON.parse(toolCall.function.arguments);
+            } catch {
+              console.error(`[voice] Failed to parse tool arguments for ${toolCall.function.name}`);
+              continue;
+            }
             const toolResult = await deps.tools.execute(toolCall.function.name, args);
             history.push({ role: "tool", content: toolResult, name: toolCall.function.name });
             // Re-run reasoning with tool result

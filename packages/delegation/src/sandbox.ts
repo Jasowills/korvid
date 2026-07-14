@@ -86,9 +86,18 @@ function runInDocker(containerName: string, command: string, timeout: number) {
 
 function runLocal(workDir: string, command: string, timeout: number, env?: Record<string, string>) {
   return new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+    // Only pass PATH and essential env vars — never leak the full process.env
+    const safeEnv: Record<string, string> = {
+      PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
+      HOME: process.env.HOME ?? "/tmp",
+      USER: process.env.USER ?? "root",
+      NODE_ENV: process.env.NODE_ENV ?? "production",
+      ...(env ?? {}),
+    };
+
     const proc = spawn("sh", ["-c", command], {
       cwd: workDir,
-      env: { ...process.env, ...env },
+      env: safeEnv,
       stdio: ["pipe", "pipe", "pipe"],
     });
 

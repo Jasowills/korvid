@@ -83,6 +83,7 @@ function createElevenLabsTTS(
   model?: string
 ): TTSEngine {
   let abortController: AbortController | null = null;
+  let currentProcess: ReturnType<typeof spawn> | null = null;
 
   return {
     async speak(text: string, opts?: { onInterrupt?: () => void }) {
@@ -120,6 +121,7 @@ function createElevenLabsTTS(
         const proc = spawn("ffplay", [
           "-nodisp", "-autoexit", "-loglevel", "quiet", "-i", "pipe:0",
         ]);
+        currentProcess = proc;
 
         const reader = res.body?.getReader();
         if (reader) {
@@ -136,10 +138,14 @@ function createElevenLabsTTS(
 
         return new Promise<void>((resolve, reject) => {
           proc.on("close", (code) => {
+            currentProcess = null;
             if (code === 0 || code === null) resolve();
             else reject(new Error(`ffplay exited ${code}`));
           });
-          proc.on("error", reject);
+          proc.on("error", (err) => {
+            currentProcess = null;
+            reject(err);
+          });
         });
       } catch (e: any) {
         clearTimeout(timeoutId);
@@ -153,6 +159,10 @@ function createElevenLabsTTS(
     stop() {
       abortController?.abort();
       abortController = null;
+      if (currentProcess) {
+        currentProcess.kill("SIGTERM");
+        currentProcess = null;
+      }
     },
   };
 }
@@ -165,6 +175,7 @@ function createCartesiaTTS(
   model?: string
 ): TTSEngine {
   let abortController: AbortController | null = null;
+  let currentProcess: ReturnType<typeof spawn> | null = null;
 
   return {
     async speak(text: string, opts?: { onInterrupt?: () => void }) {
@@ -203,6 +214,7 @@ function createCartesiaTTS(
         const proc = spawn("ffplay", [
           "-nodisp", "-autoexit", "-loglevel", "quiet", "-i", "pipe:0",
         ]);
+        currentProcess = proc;
 
         const reader = res.body?.getReader();
         if (reader) {
@@ -219,10 +231,14 @@ function createCartesiaTTS(
 
         return new Promise<void>((resolve, reject) => {
           proc.on("close", (code) => {
+            currentProcess = null;
             if (code === 0 || code === null) resolve();
             else reject(new Error(`ffplay exited ${code}`));
           });
-          proc.on("error", reject);
+          proc.on("error", (err) => {
+            currentProcess = null;
+            reject(err);
+          });
         });
       } catch (e: any) {
         clearTimeout(timeoutId);
@@ -236,6 +252,10 @@ function createCartesiaTTS(
     stop() {
       abortController?.abort();
       abortController = null;
+      if (currentProcess) {
+        currentProcess.kill("SIGTERM");
+        currentProcess = null;
+      }
     },
   };
 }

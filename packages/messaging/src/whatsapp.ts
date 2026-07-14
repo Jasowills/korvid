@@ -66,13 +66,14 @@ export function verifyWhatsAppSignature(
   signature: string | undefined,
   appSecret: string | undefined
 ): boolean {
-  if (!appSecret || !signature) return !appSecret; // If no secret configured, allow (backward compat)
+  if (!appSecret) return false;
+  if (!signature) return false;
 
   const expectedSig = signature.replace("sha256=", "");
   const hmac = createHmac("sha256", appSecret).update(body).digest("hex");
 
   try {
-    return timingSafeEqual(Buffer.from(hmac, "hex"), Buffer.from(expectedSig, "hex"));
+    return hmac.length === expectedSig.length && timingSafeEqual(Buffer.from(hmac, "hex"), Buffer.from(expectedSig, "hex"));
   } catch {
     return false;
   }

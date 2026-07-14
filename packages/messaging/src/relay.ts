@@ -8,12 +8,13 @@ export interface MessageRelay {
   onRelay(handler: (msg: Message, platform: string) => void): void;
 }
 
-export function createMessageRelay(opts?: { maxRetries?: number; retryDelayMs?: number }): MessageRelay {
+export function createMessageRelay(opts?: { maxRetries?: number; retryDelayMs?: number; maxQueueSize?: number }): MessageRelay {
   const bridges = new Map<string, MessageBridge>();
   const queue: MessageQueueItem[] = [];
   const relayHandlers: ((msg: Message, platform: string) => void)[] = [];
   const maxRetries = opts?.maxRetries ?? 3;
   const retryDelayMs = opts?.retryDelayMs ?? 5000;
+  const maxQueueSize = opts?.maxQueueSize ?? 100;
 
   return {
     registerBridge(bridge: MessageBridge) {
@@ -43,14 +44,18 @@ export function createMessageRelay(opts?: { maxRetries?: number; retryDelayMs?: 
         if (result.success) {
           for (const handler of relayHandlers) handler(msg, result.platform);
         } else {
-          // Enqueue for retry
-          queue.push({
-            message: { ...msg, metadata: { ...msg.metadata, relayTarget: result.platform } },
-            attempts: 1,
-            maxAttempts: maxRetries,
-            nextRetryAt: Date.now() + retryDelayMs,
-            lastError: result.error,
-          });
+          // Enqueue for retry (respect max queue size to prevent unbounded growth)
+          if (queue.length < maxQueueSize) {
+            queue.push({
+              message: { ...msg, metadata: { ...msg.metadata, relayTarget: result.platform } },
+              attempts: 1,
+              maxAttempts: maxRetries,
+              nextRetryAt: Date.now() + retryDelayMs,
+              lastError: result.error,
+            });
+          } else {
+            console.log(`[messaging] Retry queue full, dropping message to ${result.platform}`);
+          }
         }
       }
     },

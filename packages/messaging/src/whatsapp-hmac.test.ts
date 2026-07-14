@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { verifyWhatsAppSignature } from "./whatsapp.js";
 
 describe("WhatsApp HMAC verification", () => {
-  it("returns true when no app secret is configured (backward compat)", () => {
-    expect(verifyWhatsAppSignature("body", "sha256=abc", undefined)).toBe(true);
+  it("returns false when no app secret is configured (reject unauthenticated)", () => {
+    expect(verifyWhatsAppSignature("body", "sha256=abc", undefined)).toBe(false);
   });
 
   it("returns true for valid signature", () => {

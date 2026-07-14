@@ -57,9 +57,16 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
     return token === authToken;
   }
 
+  const ALLOWED_ORIGINS = new Set([
+    `http://127.0.0.1:${config.gateway.port}`,
+    `http://localhost:${config.gateway.port}`,
+  ]);
+
   function setCorsHeaders(res: http.IncomingMessage, serverRes: http.ServerResponse) {
     const origin = res.headers.origin;
-    serverRes.setHeader("Access-Control-Allow-Origin", origin ?? `http://127.0.0.1:${config.gateway.port}`);
+    if (origin && ALLOWED_ORIGINS.has(origin)) {
+      serverRes.setHeader("Access-Control-Allow-Origin", origin);
+    }
     serverRes.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     serverRes.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Auth-Token");
     serverRes.setHeader("Access-Control-Max-Age", "86400");
@@ -110,6 +117,12 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
         }
 
         if (req.url === "/api/token" && req.method === "POST") {
+          const token = req.headers["x-auth-token"] as string;
+          if (!authenticateClient(null as any, token)) {
+            res.statusCode = 401;
+            res.end(JSON.stringify({ error: "Unauthorized" }));
+            return;
+          }
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ token: authToken }));
           return;
@@ -161,6 +174,19 @@ export function createGateway(config: KorvidConfig): GatewayInstance {
             req.on("end", () => {
               try {
                 const perms = JSON.parse(body);
+                if (typeof perms !== "object" || perms === null || Array.isArray(perms)) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: "Expected object" }));
+                  return;
+                }
+                // Validate each permission entry has required fields
+                for (const [key, val] of Object.entries(perms)) {
+                  if (typeof val !== "object" || val === null || typeof (val as any).level !== "string") {
+                    res.statusCode = 400;
+                    res.end(JSON.stringify({ error: `Invalid permission entry for "${key}": must have a "level" string` }));
+                    return;
+                  }
+                }
                 toolPermissions = perms;
                 broadcastToSubscribers({ type: "tool_permissions", permissions: toolPermissions });
                 res.setHeader("Content-Type", "application/json");

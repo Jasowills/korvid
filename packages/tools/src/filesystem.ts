@@ -4,7 +4,11 @@ import { resolve, join } from "node:path";
 import { z } from "zod";
 import type { Tool } from "./types.js";
 
-const BLOCKED_PATHS = ["/etc", "/System", "/usr/bin", "/usr/sbin"];
+const BLOCKED_PATHS = [
+  "/etc", "/System", "/usr/bin", "/usr/sbin", "/usr/lib",
+  "/bin", "/sbin", "/private/etc", "/var/db",
+  "/boot", "/dev", "/proc", "/sys", "/root",
+];
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 function isPathSafe(filePath: string): { safe: boolean; reason?: string } {

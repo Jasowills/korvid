@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { writeFile, unlink } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { KorvidConfig } from "@korvid/shared";
@@ -67,7 +68,6 @@ function tryWhisperCpp(audioPath: string): Promise<string> {
         reject(new Error(`whisper.cpp exited ${code}: ${stderr}`));
         return;
       }
-      const { readFileSync } = require("node:fs");
       const txtPath = audioPath.replace(/\.[^.]+$/, ".txt");
       try {
         const text = readFileSync(txtPath, "utf-8").trim();

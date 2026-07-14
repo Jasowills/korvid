@@ -113,9 +113,10 @@ export function createDelegationLoop(config: KorvidConfig): DelegationLoop {
             if (cp) checkpoints.push(cp);
           }
 
-          // Step 3a: Write spec to sandbox
+          // Step 3a: Write spec to sandbox (use unique path per attempt to avoid race condition)
           const specContent = formatSpecForAgent(spec);
-          await sandbox.run(`echo '${specContent.replace(/'/g, "'\\''")}' > /tmp/spec.md`);
+          const specPath = `/tmp/spec-${sandboxId}.md`;
+          await sandbox.run(`cat > "${specPath}" << 'KORVID_SPEC_EOF'\n${specContent}\nKORVID_SPEC_EOF`);
 
           // Step 3b: Run the coding agent
           emit("agent_running", { agent: agent.id, attempt: attempts, sandboxId });
@@ -124,12 +125,12 @@ export function createDelegationLoop(config: KorvidConfig): DelegationLoop {
 
           if (agent.id === "opencode") {
             agentResult = await sandbox.run(
-              `cd "${sandbox.workDir}" && opencode -y "Read /tmp/spec.md and implement the requirements described in it. After implementing, run the test suite and commit your changes." 2>&1`,
+              `cd "${sandbox.workDir}" && opencode -y "Read ${specPath} and implement the requirements described in it. After implementing, run the test suite and commit your changes." 2>&1`,
               { timeout: (config.delegation.maxWallClockMinutes - 2) * 60 * 1000 }
             );
           } else if (agent.id === "claude") {
             agentResult = await sandbox.run(
-              `cd "${sandbox.workDir}" && claude -y "Read /tmp/spec.md and implement the requirements described in it. After implementing, run the test suite and commit your changes." 2>&1`,
+              `cd "${sandbox.workDir}" && claude -y "Read ${specPath} and implement the requirements described in it. After implementing, run the test suite and commit your changes." 2>&1`,
               { timeout: (config.delegation.maxWallClockMinutes - 2) * 60 * 1000 }
             );
           } else {
